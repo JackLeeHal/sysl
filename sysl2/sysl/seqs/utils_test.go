@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/anz-bank/sysl/src/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTransformBlackBoxes(t *testing.T) {
@@ -243,7 +244,7 @@ func TestMergeAttributes(t *testing.T) {
 			args{appMap, epMap},
 			map[string]*sysl.Attribute{
 				"app": appAttr,
-				"ep": epAttr,
+				"ep":  epAttr,
 			},
 		},
 	}
@@ -254,4 +255,263 @@ func TestMergeAttributes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetAppName(t *testing.T) {
+	// given
+	a := &sysl.AppName{
+		Part: []string{"test", "name"},
+	}
+
+	// when
+	actual := getAppName(a)
+
+	// then
+	assert.Equal(t, "test :: name", actual, "unexpected result")
+}
+
+func TestGetAppAttr(t *testing.T) {
+	// given
+	attr := map[string]*sysl.Attribute{
+		"attr1": {},
+	}
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {Attrs: attr},
+		},
+	}
+
+	// when
+	actual := getApplicationAttrs(m, "test")
+
+	// then
+	assert.Equal(t, attr, actual)
+}
+
+func TestGetAppAttrWhenAppNotExist(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: make(map[string]*sysl.Application),
+	}
+
+	// when
+	actual := getApplicationAttrs(m, "test")
+
+	// then
+	assert.Nil(t, actual)
+}
+
+func TestSortedISOCtrlSlice(t *testing.T) {
+	// given
+	attrs := map[string]*sysl.Attribute{
+		"iso_ctrl_11_txt": {},
+		"iso_ctrl_12_txt": {},
+		"iso_ctrl_5_txt":  {},
+	}
+
+	// when
+	actual := getSortedISOCtrlSlice(attrs)
+
+	// then
+	assert.Equal(t, []string{"11", "12", "5"}, actual)
+}
+
+func TestSortedISOCtrlSliceEmpty(t *testing.T) {
+	// given
+	attrs := make(map[string]*sysl.Attribute)
+
+	// when
+	actual := getSortedISOCtrlSlice(attrs)
+
+	// then
+	assert.Equal(t, []string{}, actual)
+}
+
+func TestSortedISOCtrlStr(t *testing.T) {
+	// given
+	attrs := map[string]*sysl.Attribute{
+		"iso_ctrl_11_txt": {},
+		"iso_ctrl_12_txt": {},
+		"iso_ctrl_5_txt":  {},
+	}
+
+	// when
+	actual := getSortedISOCtrlStr(attrs)
+
+	// then
+	assert.Equal(t, "11, 12, 5", actual)
+}
+
+func TestSortedISOCtrlStrEmpty(t *testing.T) {
+	// given
+	attrs := make(map[string]*sysl.Attribute)
+
+	// when
+	actual := getSortedISOCtrlStr(attrs)
+
+	// then
+	assert.Equal(t, "", actual)
+}
+
+func TestFormatArgs(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: map[string]*sysl.Attribute{
+							"iso_conf": {
+								Attribute: &sysl.Attribute_S{
+									S: "Red",
+								},
+							},
+							"iso_integ": {
+								Attribute: &sysl.Attribute_S{
+									S: "I",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "test", "User")
+
+	assert.Equal(t, "<color blue>test.User</color> <<color red>R, I</color>>", actual)
+}
+
+func TestFormatArgsWithoutIsoInteg(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: map[string]*sysl.Attribute{
+							"iso_conf": {
+								Attribute: &sysl.Attribute_S{
+									S: "Red",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "test", "User")
+
+	assert.Equal(t, "<color blue>test.User</color> <<color red>R, ?</color>>", actual)
+}
+
+func TestFormatArgsWithoutIsoConf(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: map[string]*sysl.Attribute{
+							"iso_integ": {
+								Attribute: &sysl.Attribute_S{
+									S: "I",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "test", "User")
+
+	assert.Equal(t, "<color blue>test.User</color> <<color green>?, I</color>>", actual)
+}
+
+func TestFormatArgsWithoutAttrs(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: make(map[string]*sysl.Attribute),
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "test", "User")
+
+	assert.Equal(t, "<color blue>test.User</color> <<color green>?, ?</color>>", actual)
+}
+
+func TestFormatArgsWithoutParameterTypeName(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: make(map[string]*sysl.Attribute),
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "test", "")
+
+	assert.Equal(t, "", actual)
+}
+
+func TestFormatArgsWithoutAppName(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: make(map[string]*sysl.Attribute),
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "", "User")
+
+	assert.Equal(t, "", actual)
+}
+
+func TestFormatArgsWithoutAppNameAndParameterTypeName(t *testing.T) {
+	// given
+	m := &sysl.Module{
+		Apps: map[string]*sysl.Application{
+			"test": {
+				Types: map[string]*sysl.Type{
+					"User": {
+						Attrs: make(map[string]*sysl.Attribute),
+					},
+				},
+			},
+		},
+	}
+
+	// when
+	actual := formatArgs(m, "", "")
+
+	assert.Equal(t, "", actual)
 }
