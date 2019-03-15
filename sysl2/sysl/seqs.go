@@ -166,8 +166,7 @@ func constructSimpleParser(former, latter string) *SimpleParser {
 	return &SimpleParser{self: fmtstr}
 }
 
-func DoConstructSequenceDiagrams(root_model, endpoint_format, app_format, title, plantuml, filter, output string,
-	no_activations, verbose, expire_cache, dry_run bool,
+func DoConstructSequenceDiagrams(root_model, endpoint_format, app_format, title, plantuml, output string,
 	endpoints, apps, modules []string, blackboxes [][]string) {
 	mod := loadApp(root_model, modules)
 	syslSdFilters, exists := os.LookupEnv("SYSL_SD_FILTERS")
@@ -192,15 +191,6 @@ func DoConstructSequenceDiagrams(root_model, endpoint_format, app_format, title,
 			}
 			sort.Strings(keys)
 			for _, k := range keys {
-				is_continue := false
-				for _, filt := range epFilters {
-					log.Warn(filt)
-				}
-
-				if is_continue {
-					continue
-				}
-
 				epAttrs := app.GetEndpoints()[k].GetAttrs()
 				output_dir := spout.fmtOutput(appName, k, app.GetEndpoints()[k].GetLongName(), epAttrs)
 				bbs2 := seqs.TransformBlackBoxes(app.GetEndpoints()[k].GetAttrs()["blackboxes"].GetA().GetElt())
@@ -246,28 +236,30 @@ func DoConstructSequenceDiagrams(root_model, endpoint_format, app_format, title,
 func DoGenerateSequenceDiagrams(stdout, stderr io.Writer, flags *flag.FlagSet, args []string) int {
 	var endpoints_flag, apps_flag, blackboxes_flag, modules_flag arrayFlags
 	root_model := flags.String("root-model", ".", "sysl root directory for input model file (default: .)")
-	flags.Var(&endpoints_flag, "endpoint", "Include endpoint in sequence diagram")
-	flags.Var(&apps_flag, "app", "Include all endpoints for app in sequence diagram (currently "+
-		"only works with templated --output). Use SYSL_SD_FILTERS env (a "+
-		"comma-list of shell globs) to limit the diagrams generated")
-	no_activations := flags.Bool("no-activations", true, "Suppress sequence diagram activation bars(default: true)")
 	endpoint_format := flags.String("endpoint_format", "%(epname)", "Specify the format string for sequence diagram endpoints. "+
 		"May include %%(epname), %%(eplongname) and %%(@foo) for attribute foo(default: %(epname))")
 	app_format := flags.String("app_format", "%(appname)", "Specify the format string for sequence diagram participants. "+
 		"May include %%(appname) and %%(@foo) for attribute foo(default: %(appname))")
-	flags.Var(&blackboxes_flag, "blackbox", "Apps to be treated as black boxes")
 	title := flags.String("title", "", "diagram title")
 	plantuml := flags.String("plantuml", "", strings.Join([]string{"base url of plantuml server",
 		"(default: $SYSL_PLANTUML or http://localhost:8080/plantuml",
 		"see http://plantuml.com/server.html#install for more info)"}, "\n"))
-	verbose := flags.Bool("verbose", false, "Report each output(default: false)")
-	expire_cache := flags.Bool("expire-cache", false, "Expire cache entries to force checking against real destination(default: false)")
-	dry_run := flags.Bool("dry-run", false, "Don't perform confluence uploads, but show what would have happened(default: false)")
-	filter := flags.String("filter", "", "Only generate diagrams whose output paths match a pattern")
+	output := flags.String("output", "%(epname).png", "output file(default: %(epname).png)")
+	flags.Var(&endpoints_flag, "endpoint", "Include endpoint in sequence diagram")
+	flags.Var(&apps_flag, "app", "Include all endpoints for app in sequence diagram (currently "+
+		"only works with templated --output). Use SYSL_SD_FILTERS env (a "+
+		"comma-list of shell globs) to limit the diagrams generated")
+	flags.Var(&blackboxes_flag, "blackbox", "Apps to be treated as black boxes")
 	flags.Var(&modules_flag, "modules", strings.Join([]string{"input files without .sysl extension and with leading /",
 		"eg: /project_dir/my_models",
 		"combine with --root if needed"}, "\n"))
-	output := flags.String("output", "%(epname).png", "output file(default: %(epname).png)")
+
+	// Following variables currently are unused. Keep them to align with the python version.
+	filter := flags.String("filter", "", "Only generate diagrams whose output paths match a pattern")
+	no_activations := flags.Bool("no-activations", true, "Suppress sequence diagram activation bars(default: true)")
+	verbose := flags.Bool("verbose", false, "Report each output(default: false)")
+	expire_cache := flags.Bool("expire-cache", false, "Expire cache entries to force checking against real destination(default: false)")
+	dry_run := flags.Bool("dry-run", false, "Don't perform confluence uploads, but show what would have happened(default: false)")
 
 	err := flags.Parse(args[1:])
 	if err != nil {
@@ -289,8 +281,8 @@ func DoGenerateSequenceDiagrams(stdout, stderr io.Writer, flags *flag.FlagSet, a
 	log.Warnf("modules: %s\n", modules_flag)
 	log.Warnf("output: %s\n", *output)
 
-	DoConstructSequenceDiagrams(*root_model, *endpoint_format, *app_format, *title, *plantuml, *filter, *output, *no_activations,
-		*verbose, *expire_cache, *dry_run, endpoints_flag, apps_flag, modules_flag, seqs.ParseBlackBoxesFromArgument(blackboxes_flag))
+	DoConstructSequenceDiagrams(*root_model, *endpoint_format, *app_format, *title, *plantuml, *output,
+		endpoints_flag, apps_flag, modules_flag, seqs.ParseBlackBoxesFromArgument(blackboxes_flag))
 
 	return 0
 }

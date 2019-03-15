@@ -6,7 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"sysl/sysl2/sysl/seqs"
+	"github.com/anz-bank/sysl/sysl2/sysl/seqs"
 	"github.com/anz-bank/sysl/src/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -146,84 +146,6 @@ func TestLoadApp(t *testing.T) {
 	}
 	assert.Equal(t, []string{"user_id"}, expectedParams)
 }
-
-//func TestSimpleParserFmtEp(t *testing.T) {
-//	type fields struct {
-//		self string
-//	}
-//	type args struct {
-//		p *epFmtParam
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//		want   string
-//	}{
-//		{
-//			name: "Case-Null",
-//			fields: fields{"Hello"},
-//			args: args{&epFmtParam{}},
-//			want: "Hello",
-//		},
-//		{
-//			name: "Case-Convert epname",
-//			fields: fields{"Hello %(epname)"},
-//			args: args{&epFmtParam{epname: "World"}},
-//			want: "Hello World",
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			sp := &SimpleParser{
-//				self: tt.fields.self,
-//			}
-//			if got := sp.fmtEp(tt.args.p); got != tt.want {
-//				t.Errorf("SimpleParser.fmtEp() = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
-//
-//func TestSimpleParserFmtApp(t *testing.T) {
-//	type fields struct {
-//		self string
-//	}
-//	type args struct {
-//		appname  string
-//		controls string
-//		attrs    map[string]*sysl.Attribute
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//		want   string
-//	}{
-//		{
-//			name: "Case-Null",
-//			fields: fields{"Hello"},
-//			args: args{appname: "World"},
-//			want: "Hello",
-//		},
-//		{
-//			name: "Case-Convert epname",
-//			fields: fields{"Hello %(appname)"},
-//			args: args{appname: "World"},
-//			want: "Hello World",
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			sp := &SimpleParser{
-//				self: tt.fields.self,
-//			}
-//			if got := sp.fmtApp(tt.args.appname, tt.args.controls, tt.args.attrs); got != tt.want {
-//				t.Errorf("SimpleParser.fmtApp() = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
 
 func TestSimpleParserFmtSeq(t *testing.T) {
 	type fields struct {
@@ -381,7 +303,7 @@ func TestDoConstructSequenceDiagramsNoSyslSdFilters(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			DoConstructSequenceDiagrams(tt.args.root_model, tt.args.endpoint_format, tt.args.app_format, tt.args.title, tt.args.plantuml, tt.args.filter, tt.args.output, tt.args.no_activations, tt.args.verbose, tt.args.expire_cache, tt.args.dry_run, tt.args.endpoints, tt.args.apps, tt.args.modules, tt.args.blackboxes)
+			DoConstructSequenceDiagrams(tt.args.root_model, tt.args.endpoint_format, tt.args.app_format, tt.args.title, tt.args.plantuml, tt.args.output, tt.args.endpoints, tt.args.apps, tt.args.modules, tt.args.blackboxes)
 		})
 	}
 }
@@ -405,7 +327,7 @@ func TestDoConstructSequenceDiagrams(t *testing.T) {
 	os.Setenv("SYSL_SD_FILTERS", "*")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			DoConstructSequenceDiagrams(tt.args.root_model, tt.args.endpoint_format, tt.args.app_format, tt.args.title, tt.args.plantuml, tt.args.filter, tt.args.output, tt.args.no_activations, tt.args.verbose, tt.args.expire_cache, tt.args.dry_run, tt.args.endpoints, tt.args.apps, tt.args.modules, tt.args.blackboxes)
+			DoConstructSequenceDiagrams(tt.args.root_model, tt.args.endpoint_format, tt.args.app_format, tt.args.title, tt.args.plantuml, tt.args.output, tt.args.endpoints, tt.args.apps, tt.args.modules, tt.args.blackboxes)
 		})
 	}
 }
