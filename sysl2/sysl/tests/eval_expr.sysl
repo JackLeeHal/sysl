@@ -1,4 +1,4 @@
-Model [package="com.example.gen"]:
+Model [package="com.example.gen", name="Model"]:
   !type Request:
     id <: int?
     payload <: string
@@ -30,7 +30,7 @@ TodoApp:
     GET:
       return todos
 
-    POST (todo <: Todo):
+    POST (newTodo <: Todo [~body], accept <: string [~header]):
       return todo
 
     /{id<:int}:
@@ -63,10 +63,14 @@ TransformApp:
       ne = lhs != rhs
     )
 
-  !view UnionSet(lhs <: string) -> set of string:
+  !view ListSetOps(lhs <: string) -> set of string:
     lhs -> (:
+      count1 = [1,2] count
+      count2 = {1,2} count
       strs = {"rhs", "lhs"} | {"lhs"}
       numbers = {1} | {1,2}
+      numbers2 =  {1,2} where(. > 2) | {1} where(. > 2)
+      list = [1] | [1,2]
     )
 
   !view IsKeyword(word <: string) -> bool:
@@ -102,17 +106,17 @@ TransformApp:
       methodName = "set" + field.key
     )
 
-  !view classDef(types <: app.Types) -> classDef:
+  !view classDef(types <: app.Types) -> set of classDef:
     types -> (t:
       className = t.key + "Impl"
       classBody = Getters(t.value.fields) | Setters(t.value.fields)
     )
 
-  !view GetAppAttributes(app <: sysl.App) -> int:
+  !view GetAppAttributes(app <: sysl.App) -> object:
     app -> (:
       out = app.attrs.package
 
-      package = .attrs.package -> <package> (name:
+      package = .attrs.package -> <set of package> (name:
         packageName = name
       )
 
@@ -121,6 +125,11 @@ TransformApp:
       )
 
       definition = classDef(app.types)
+      Nil = . -> <some> (:
+        out = .
+      )
+      stringInNull = "abc" in app.attrs.patterns
+      stringInList = "pqr" in ["abc", "def"]
     )
 
   !view TestDotScope(app <: sysl.App) -> int:
@@ -156,6 +165,9 @@ TransformApp:
       TrimSpace = TrimSpace(" hello world! ")
       TrimSuffix = TrimSuffix(" hello world", "world")
       hasHello = "Hello" in Fields("Hello World!")
+      MatchString = MatchString("^([A-Z]+[a-z]+|[A-Z]+|[a-z]+)$", "HTTPCODE")
+      FindAllString = FindAllString("[a-z]+|[A-Z][a-z]+|[A-Z]+", "httpCode", -1)
+      tabs = FindAllString("\\t", "\tXXX\t", -1)
     )
 
   !view IncorrectArgsToGoFunc(app <: sysl.App) -> int:
@@ -172,9 +184,10 @@ TransformApp:
         name = ep.value.method  + Join(ep.value.pathvars flatten(.name), "")
       )
       names = n flatten(.name)
-      listOfNumbers1 = [[1,2,3], [4,5,6]] flatten(.)
-      listOfNumbers2 = [{1,2,3}, {4,5,6}] flatten(.)
-      setOfNumbers1 = {{1,2,3}, {4,5,6}} flatten(.)
+      let two = 2
+      listOfNumbers1 = [[1,2,3], [4,5,6]] flatten(. + two)
+      listOfNumbers2 = [{1,2,3}, {4,5,6}] flatten(. * two)
+      setOfNumbers1 = {{1,2,3}, {4,5,6}} flatten(. * two)
     )
 
   !view Where(app <: sysl.App) -> int:
@@ -185,7 +198,15 @@ TransformApp:
       let fieldNames = app.types -> <set of name>(type:
         name = type.key
       )
-      Request = fieldNames where(.name == "Request")
+      let requestStr = "Request"
+      Request = fieldNames where(.name == requestStr)
+
+      let listOfTypes = app.types -> <sequence of name>(type:
+        name = type.key
+      )
+      ListofNames = listOfTypes
+      RequestFromList = listOfTypes where (.name == requestStr)
+      NotObjectAliases = app.alias where(.key != "Object")
     )
 
   !view Links(app <: sysl.App) -> int:
@@ -197,4 +218,17 @@ TransformApp:
         )
       )
       links = out flatten(.inner)
+    )
+
+  !view NullCheckAppAttrs(app <: sysl.App) -> int:
+    app -> (:
+      NotHasAttrName = .attrs.name == null
+      NotHasAttrFoo = .attrs.foo == null
+      hasAttrName = .attrs.name != null
+      hasAttrFoo = .attrs.foo != null
+    )
+
+  !view ListOfTypeNames(app <: sysl.App) -> sequence of types:
+    app.types -> (type:
+      name = type.key
     )

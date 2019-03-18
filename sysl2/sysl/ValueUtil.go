@@ -180,6 +180,7 @@ func typeToValue(t *sysl.Type) *sysl.Value {
 		typeName, typeDetail = getTypeDetail(t.GetSequence())
 		addItemToValueMap(seqMap, "type", MakeValueString(typeName))
 		addItemToValueMap(seqMap, typeName, MakeValueString(typeDetail))
+		addItemToValueMap(seqMap, "optional", MakeValueBool(false))
 	}
 	return m
 }
@@ -231,6 +232,7 @@ func queryParamsToValue(qp *sysl.Endpoint_RestParams_QueryParam) *sysl.Value {
 	addItemToValueMap(m, "name", MakeValueString(qp.Name))
 	typeName, typeDetail := getTypeDetail(qp.Type)
 	addItemToValueMap(m, "type", MakeValueString(typeName))
+	addItemToValueMap(m, "optional", MakeValueBool(qp.Type.GetOpt()))
 	addItemToValueMap(m, typeName, MakeValueString(typeDetail))
 	return m
 }
@@ -241,6 +243,8 @@ func paramToValue(qp *sysl.Param) *sysl.Value {
 	typeName, typeDetail := getTypeDetail(qp.Type)
 	addItemToValueMap(m, "type", MakeValueString(typeName))
 	addItemToValueMap(m, typeName, MakeValueString(typeDetail))
+	addItemToValueMap(m, "attrs", attrsToValueMap(qp.Type.Attrs))
+	addItemToValueMap(m, "optional", MakeValueBool(qp.Type.GetOpt()))
 	return m
 }
 
@@ -287,13 +291,13 @@ func endpointToValue(e *sysl.Endpoint) *sysl.Value {
 			appendItemToValueList(pathvars.GetList(), queryParamsToValue(query_param))
 		}
 		addItemToValueMap(m, "pathvars", pathvars)
-
-		params := MakeValueList()
-		for _, param := range e.Param {
-			appendItemToValueList(params.GetList(), paramToValue(param))
-		}
-		addItemToValueMap(m, "params", params)
 	}
+
+	params := MakeValueList()
+	for _, param := range e.Param {
+		appendItemToValueList(params.GetList(), paramToValue(param))
+	}
+	addItemToValueMap(m, "params", params)
 
 	stmtsList := MakeValueList()
 	for _, stmt := range e.Stmt {
@@ -317,19 +321,19 @@ func endpointsToValueMap(endpoints map[string]*sysl.Endpoint) *sysl.Value {
 }
 
 // AddInt add int to scope
-func (s *Scope) AddInt(name string, val int64) {
-	(*s)[name] = MakeValueI64(val)
+func (s Scope) AddInt(name string, val int64) {
+	s[name] = MakeValueI64(val)
 }
 
 // AddString add string to scope
-func (s *Scope) AddString(name string, val string) {
-	(*s)[name] = MakeValueString(val)
+func (s Scope) AddString(name string, val string) {
+	s[name] = MakeValueString(val)
 }
 
 // AddApp add sysl.App to scope
-func (s *Scope) AddApp(name string, app *sysl.Application) {
+func (s Scope) AddApp(name string, app *sysl.Application) {
 	m := MakeValueMap()
-	(*s)[name] = m
+	s[name] = m
 	addItemToValueMap(m, "name", MakeValueString(getAppName(app.Name)))
 	addItemToValueMap(m, "attrs", attrsToValueMap(app.Attrs))
 	addItemToValueMap(m, "types", typesToValueMap(app.Types))
