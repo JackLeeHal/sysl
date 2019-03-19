@@ -6,16 +6,16 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"github.com/anz-bank/sysl/sysl2/sysl/seqs"
+
 	"github.com/anz-bank/sysl/src/proto"
+	"github.com/anz-bank/sysl/sysl2/sysl/seqs"
 	"github.com/stretchr/testify/assert"
 )
 
 type labeler struct {
-
 }
 
-func (l *labeler) LabelApp(appName, controls string, attrs map[string]*sysl.Attribute) string  {
+func (l *labeler) LabelApp(appName, controls string, attrs map[string]*sysl.Attribute) string {
 	return appName
 }
 
@@ -60,6 +60,7 @@ activate _0
 deactivate _0
 @enduml
 `
+
 	assert.NotNil(t, m)
 	assert.NotNil(t, r)
 	assert.Nil(t, err)
@@ -74,7 +75,7 @@ func TestArrayFlagsString(t *testing.T) {
 	}{
 		{
 			name: "Success",
-			i: &arrayFlags{"FlagA"},
+			i:    &arrayFlags{"FlagA"},
 			want: "FlagA",
 		},
 	}
@@ -98,9 +99,9 @@ func TestArrayFlagsSet(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "",
-			i: &arrayFlags{"FlagA"},
-			args: args{"FlagB"},
+			name:    "",
+			i:       &arrayFlags{"FlagA"},
+			args:    args{"FlagB"},
 			wantErr: false,
 		},
 	}
@@ -118,8 +119,8 @@ type loadAppArgs struct {
 	models []string
 }
 
-func TestLoadAppReturnError(t *testing.T)  {
-	test := loadAppArgs {
+func TestLoadAppReturnError(t *testing.T) {
+	test := loadAppArgs{
 		"../../demo/simple/", []string{},
 	}
 	mod := loadApp(test.root, test.models)
@@ -127,7 +128,7 @@ func TestLoadAppReturnError(t *testing.T)  {
 }
 
 func TestLoadApp(t *testing.T) {
-	test := loadAppArgs {
+	test := loadAppArgs{
 		"./tests/", []string{"test-sd.sysl"},
 	}
 	mod := loadApp(test.root, test.models)
@@ -136,7 +137,7 @@ func TestLoadApp(t *testing.T) {
 	app := apps["Database"]
 	assert.Equal(t, []string{"Database"}, app.GetName().GetPart())
 	var expectedPatterns []string
-	for _, val := range app.GetAttrs()["patterns"].GetA().GetElt()  {
+	for _, val := range app.GetAttrs()["patterns"].GetA().GetElt() {
 		expectedPatterns = append(expectedPatterns, val.GetS())
 	}
 	assert.Equal(t, []string{"db"}, expectedPatterns)
@@ -163,16 +164,16 @@ func TestSimpleParserFmtSeq(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "Case-Null",
+			name:   "Case-Null",
 			fields: fields{"Hello"},
-			args: args{eplongname: "World"},
-			want: "Hello",
+			args:   args{eplongname: "World"},
+			want:   "Hello",
 		},
 		{
-			name: "Case-Convert epname",
+			name:   "Case-Convert epname",
 			fields: fields{"Hello %(eplongname)"},
-			args: args{eplongname: "World"},
-			want: "Hello World",
+			args:   args{eplongname: "World"},
+			want:   "Hello World",
 		},
 	}
 	for _, tt := range tests {
@@ -204,16 +205,16 @@ func TestSimpleParserFmtOutput(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "Case-Null",
+			name:   "Case-Null",
 			fields: fields{"Hello"},
-			args: args{appname: "Project"},
-			want: "Hello",
+			args:   args{appname: "Project"},
+			want:   "Hello",
 		},
 		{
-			name: "Case-Convert epname",
+			name:   "Case-Convert epname",
 			fields: fields{"Hello %(appname)"},
-			args: args{appname: "Project"},
-			want: "Hello Project",
+			args:   args{appname: "Project"},
+			want:   "Hello Project",
 		},
 	}
 	for _, tt := range tests {
@@ -294,10 +295,10 @@ func TestDoConstructSequenceDiagramsNoSyslSdFilters(t *testing.T) {
 			"Case-Set endpoints",
 			sdArgs{
 				root_model: "./tests/",
-				modules: []string{"test-sd.sysl"},
-				endpoints: []string{"QueryUser"},
-				output: "_.png",
-				plantuml: "http://localhost:8080",
+				modules:    []string{"test-sd.sysl"},
+				endpoints:  []string{"QueryUser"},
+				output:     "_.png",
+				plantuml:   "http://localhost:8080",
 			},
 		},
 	}
@@ -317,10 +318,10 @@ func TestDoConstructSequenceDiagrams(t *testing.T) {
 			"Case-Construct sequence diagram",
 			sdArgs{
 				root_model: "./tests/",
-				modules: []string{"sysl-sd.sysl"},
-				output: "%(epname).png",
-				plantuml: "http://localhost:8080",
-				apps: []string{"Project"},
+				modules:    []string{"sysl-sd.sysl"},
+				output:     "%(epname).png",
+				plantuml:   "http://localhost:8080",
+				apps:       []string{"Project"},
 			},
 		},
 	}
