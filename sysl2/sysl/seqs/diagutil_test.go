@@ -84,3 +84,40 @@ func TestOutputPlantumlWithUml(t *testing.T) {
 	_, err := os.Stat("test.puml")
 	assert.False(t, os.IsNotExist(err))
 }
+
+func TestOutputPlantumlWithWrongFmt(t *testing.T) {
+	//Given
+	output := "test.pag"
+	plantuml := "http://www.plantuml.com/plantuml"
+	umlInput := testPlantumlInput
+
+	//When
+	OutputPlantuml(output, plantuml, umlInput)
+
+	//Then
+	_, err := os.Stat(output)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestRequestWrongUrl(t *testing.T) {
+	//Given
+	url := "htt://www.plantuml.com/plantum"
+
+	//When
+	out, err := sendHttpRequest(url)
+
+	//Then
+	assert.NotNil(t, err)
+	assert.Nil(t, out)
+}
+
+func TestCreateFileWithWrongPath(t *testing.T) {
+	//Given
+	output := "/wrong/path/test.png"
+
+	//When
+	err := createFile(output, nil)
+
+	//Then
+	assert.NotNil(t, err)
+}
