@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/anz-bank/sysl/src/proto"
 	"github.com/anz-bank/sysl/sysl2/sysl/grammar"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = fmt.Println
@@ -699,8 +701,8 @@ func (s *TreeShapeListener) EnterField(ctx *parser.FieldContext) {
 	s.fieldname = append(s.fieldname, fieldName)
 	type1, has := s.typemap[fieldName]
 	if has {
-		fmt.Printf("WARNING: %d) %s.%s defined multiple times\n",
-			len(s.fieldname), s.typename, fieldName)
+		logrus.Warnf("%s) %s.%s defined multiple times",
+			s.filename, s.typename, fieldName)
 	} else {
 		type1 = &sysl.Type{}
 	}
@@ -1185,6 +1187,10 @@ func (s *TreeShapeListener) EnterHttp_path_var_with_type(ctx *parser.Http_path_v
 				Primitive: primitive_type,
 			},
 		}
+	} else if ctx.Reference() != nil {
+		s.fieldname = append(s.fieldname, var_name)
+		type1 = &sysl.Type{}
+		s.typemap[s.fieldname[len(s.fieldname)-1]] = type1
 	} else {
 		ref_path := []string{ctx.Name_str().GetText()}
 
@@ -1219,7 +1225,14 @@ func (s *TreeShapeListener) EnterHttp_path_var_with_type(ctx *parser.Http_path_v
 }
 
 // ExitHttp_path_var_with_type is called when production http_path_var_with_type is exited.
-func (s *TreeShapeListener) ExitHttp_path_var_with_type(ctx *parser.Http_path_var_with_typeContext) {}
+func (s *TreeShapeListener) ExitHttp_path_var_with_type(ctx *parser.Http_path_var_with_typeContext) {
+	if ctx.Reference() != nil {
+		type1 := s.typemap[s.fieldname[len(s.fieldname)-1]]
+		type1.GetTypeRef().Context.Path = nil
+		type1.GetTypeRef().Ref.Path = append(type1.GetTypeRef().Ref.Appname.Part, type1.GetTypeRef().Ref.Path...)
+		type1.GetTypeRef().Ref.Appname = nil
+	}
+}
 
 // EnterHttp_path_static is called when production http_path_static is entered.
 func (s *TreeShapeListener) EnterHttp_path_static(ctx *parser.Http_path_staticContext) {
@@ -3536,8 +3549,9 @@ func (s *TreeShapeListener) ExitView_params(ctx *parser.View_paramsContext) {}
 func (s *TreeShapeListener) EnterView(ctx *parser.ViewContext) {
 	viewName := ctx.Name_str().GetText()
 	s.module.Apps[s.appname].Views[viewName] = &sysl.View{
-		Param:   []*sysl.Param{},
-		RetType: &sysl.Type{},
+		Param:         []*sysl.Param{},
+		RetType:       &sysl.Type{},
+		SourceContext: buildSourceContext(s.filename, ctx.GetStart().GetLine(), ctx.GetStart().GetColumn()),
 	}
 	if ctx.Attribs_or_modifiers() != nil {
 		v := s.module.Apps[s.appname].Views[viewName]
@@ -3657,6 +3671,7 @@ func (s *TreeShapeListener) EnterApp_decl(ctx *parser.App_declContext) {
 	s.rest_queryparams = []*sysl.Endpoint_RestParams_QueryParam{}
 	s.rest_queryparams_len = []int{0}
 	s.rest_attrs = []map[string]*sysl.Attribute{nil}
+	s.typemap = map[string]*sysl.Type{}
 }
 
 // ExitApp_decl is called when production app_decl is exited.
@@ -3684,7 +3699,7 @@ func (s *TreeShapeListener) EnterImport_stmt(ctx *parser.Import_stmtContext) {
 	p := strings.Split(strings.TrimSpace(ctx.IMPORT().GetText()), " ")
 	path := p[len(p)-1]
 	if path[0] != '/' {
-		path = s.base + "/" + path
+		path = filepath.ToSlash(s.base) + "/" + path
 	}
 	path += ".sysl"
 	s.imports = append(s.imports, path)
