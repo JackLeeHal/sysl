@@ -332,7 +332,7 @@ func infer_expr_type(mod *sysl.Module,
 
 func infer_types(mod *sysl.Module, appName string) {
 	for viewName, view := range mod.Apps[appName].Views {
-		if hasAbstractPattern(view.Attrs) {
+		if hasPattern("abstract", view.Attrs) {
 			continue
 		}
 		if view.Expr.GetTransform() == nil {
@@ -356,7 +356,7 @@ func postProcess(mod *sysl.Module) {
 		if app.Mixin2 != nil {
 			for _, src := range app.Mixin2 {
 				src_app := getApp(src.Name, mod)
-				if hasAbstractPattern(src_app.Attrs) == false {
+				if hasPattern("abstract", src_app.Attrs) == false {
 					logrus.Warnf("mixin App (%s) should be ~abstract", getAppName(src.Name))
 					continue
 				}

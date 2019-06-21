@@ -1,4 +1,4 @@
-package integration
+package main
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/anz-bank/sysl/src/proto"
-	"github.com/anz-bank/sysl/sysl2/sysl/utils"
 )
 
 type IntsParam struct {
@@ -26,26 +25,17 @@ type Args struct {
 }
 
 type IntsDiagramVisitor struct {
-	m          *sysl.Module
-	sb         *strings.Builder
-	highlights map[string]struct{}
-	symbols    map[string]*_var
-	topSymbols map[string]*_topVar
-	project    string
-}
-
-type _var struct {
-	label string
-	alias string
+	mod           *sysl.Module
+	stringBuilder *strings.Builder
+	highlights    map[string]struct{}
+	symbols       map[string]*_var
+	topSymbols    map[string]*_topVar
+	project       string
 }
 
 type _topVar struct {
 	topLabel string
 	topAlias string
-}
-
-type Statements struct {
-	stmtSlice []*sysl.Statement
 }
 
 type CallsDrawn struct {
@@ -62,10 +52,6 @@ type viewParams struct {
 	diagramTitle       string
 }
 
-func NewStatements() *Statements {
-	return &Statements{[]*sysl.Statement{}}
-}
-
 func MakeIntsParam(apps []string, highlights map[string]struct{}, dependencies []*AppDependency, app *sysl.Application, endpt *sysl.Endpoint) *IntsParam {
 	return &IntsParam{apps, highlights, dependencies, app, endpt}
 }
@@ -74,14 +60,14 @@ func MakeArgs(title, project string, clustered, epa bool) *Args {
 	return &Args{title, project, clustered, epa}
 }
 
-func MakeIntsDiagramVisitor(m *sysl.Module, sb *strings.Builder, highlights map[string]struct{}, project string) *IntsDiagramVisitor {
+func MakeIntsDiagramVisitor(mod *sysl.Module, stringBuilder *strings.Builder, highlights map[string]struct{}, project string) *IntsDiagramVisitor {
 	return &IntsDiagramVisitor{
-		m:          m,
-		sb:         sb,
-		highlights: highlights,
-		symbols:    map[string]*_var{},
-		topSymbols: map[string]*_topVar{},
-		project:    project,
+		mod:           mod,
+		stringBuilder: stringBuilder,
+		highlights:    highlights,
+		symbols:       map[string]*_var{},
+		topSymbols:    map[string]*_topVar{},
+		project:       project,
 	}
 }
 
@@ -95,9 +81,9 @@ func (v *IntsDiagramVisitor) VarManagerForComponent(appName string, nameMap map[
 
 	i := len(v.symbols)
 	alias := fmt.Sprintf("_%d", i)
-	attrs := getApplicationAttrs(v.m, appName)
+	attrs := getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label := utils.ParseFmt(attrs, v.m.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label := ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -107,7 +93,7 @@ func (v *IntsDiagramVisitor) VarManagerForComponent(appName string, nameMap map[
 	if _, ok := v.highlights[appName]; ok {
 		r += " <<highlight>>"
 	}
-	fmt.Fprintln(v.sb, r)
+	fmt.Fprintln(v.stringBuilder, r)
 	return s.alias
 }
 
@@ -120,9 +106,9 @@ func (v *IntsDiagramVisitor) VarManagerForTopState(appName string) string {
 	i := len(v.topSymbols)
 	alias = fmt.Sprintf("_%d", i)
 
-	attrs = getApplicationAttrs(v.m, appName)
+	attrs = getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label = utils.ParseFmt(attrs, v.m.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
 	ts := &_topVar{
 		topLabel: label,
 		topAlias: alias,
@@ -134,7 +120,7 @@ func (v *IntsDiagramVisitor) VarManagerForTopState(appName string) string {
 	} else {
 		r = fmt.Sprintf("state \"%s\" as X%s {", label, alias)
 	}
-	fmt.Fprintln(v.sb, r)
+	fmt.Fprintln(v.stringBuilder, r)
 
 	return ts.topAlias
 }
@@ -152,13 +138,13 @@ func (v *IntsDiagramVisitor) VarManagerForState(name string) string {
 	i := len(v.symbols)
 	alias = fmt.Sprintf("_%d", i)
 
-	if v.m.Apps[appName].Endpoints[epName] != nil {
-		for k, v := range v.m.Apps[appName].Endpoints[epName].Attrs {
+	if v.mod.Apps[appName].Endpoints[epName] != nil {
+		for k, v := range v.mod.Apps[appName].Endpoints[epName].Attrs {
 			attrs["@"+k] = v.GetS()
 		}
 	}
 	attrs["appname"] = epName
-	label = utils.ParseFmt(attrs, v.m.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -168,7 +154,7 @@ func (v *IntsDiagramVisitor) VarManagerForState(name string) string {
 	if _, ok := v.highlights[name]; ok {
 		r += " <<highlight>>"
 	}
-	fmt.Fprintln(v.sb, r)
+	fmt.Fprintln(v.stringBuilder, r)
 	return s.alias
 }
 
@@ -179,10 +165,10 @@ func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, res
 		appB := dep.Target.Name
 		epA := dep.Self.Endpoint
 		epB := dep.Target.Endpoint
-		_, okA := v.m.Apps[appA].Endpoints[epA].Attrs[restrictBy]
-		_, okB := v.m.Apps[appB].Endpoints[epB].Attrs[restrictBy]
-		if _, ok := v.m.Apps[appA].Attrs[restrictBy]; !ok && restrictBy != "" {
-			if _, ok := v.m.Apps[appB].Attrs[restrictBy]; !ok {
+		_, okA := v.mod.Apps[appA].Endpoints[epA].Attrs[restrictBy]
+		_, okB := v.mod.Apps[appB].Endpoints[epB].Attrs[restrictBy]
+		if _, ok := v.mod.Apps[appA].Attrs[restrictBy]; !ok && restrictBy != "" {
+			if _, ok := v.mod.Apps[appB].Attrs[restrictBy]; !ok {
 				continue
 			}
 		}
@@ -190,7 +176,7 @@ func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, res
 			continue
 		}
 		clusters[appA] = append(clusters[appA], epA)
-		if appA != appB && !v.m.Apps[appA].Endpoints[epA].IsPubsub {
+		if appA != appB && !v.mod.Apps[appA].Endpoints[epA].IsPubsub {
 			clusters[appA] = append(clusters[appA], epB+" client")
 		}
 		clusters[appB] = append(clusters[appB], epB)
@@ -205,11 +191,11 @@ func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, res
 
 	for _, k := range keys {
 		v.VarManagerForTopState(k)
-		strSet := utils.MakeStrSet(clusters[k]...)
+		strSet := MakeStrSet(clusters[k]...)
 		for _, m := range strSet.ToSlice() {
 			v.VarManagerForState(k + " : " + m)
 		}
-		fmt.Fprintln(v.sb, "}")
+		fmt.Fprintln(v.stringBuilder, "}")
 	}
 }
 
@@ -233,12 +219,12 @@ func (v *IntsDiagramVisitor) buildClusterForComponentView(apps []string) map[str
 	}
 
 	for k, apps := range clusters {
-		fmt.Fprintf(v.sb, "package \"%s\" {", k)
-		fmt.Fprintln(v.sb)
+		fmt.Fprintf(v.stringBuilder, "package \"%s\" {", k)
+		fmt.Fprintln(v.stringBuilder)
 		for _, n := range apps {
 			v.VarManagerForComponent(n, nameMap)
 		}
-		fmt.Fprintln(v.sb, "}")
+		fmt.Fprintln(v.stringBuilder, "}")
 	}
 
 	return nameMap
@@ -246,29 +232,29 @@ func (v *IntsDiagramVisitor) buildClusterForComponentView(apps []string) map[str
 
 func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams, params *IntsParam) string {
 
-	fmt.Fprintln(v.sb, "@startuml")
+	fmt.Fprintln(v.stringBuilder, "@startuml")
 	if viewParams.diagramTitle != "" {
-		fmt.Fprintln(v.sb, "title "+viewParams.diagramTitle)
+		fmt.Fprintln(v.stringBuilder, "title "+viewParams.diagramTitle)
 	}
-	fmt.Fprintln(v.sb, "left to right direction")
-	fmt.Fprintln(v.sb, "scale max 16384 height")
-	fmt.Fprintln(v.sb, "hide empty description")
-	fmt.Fprintln(v.sb, "skinparam state {")
-	fmt.Fprintln(v.sb, "  BackgroundColor FloralWhite")
-	fmt.Fprintln(v.sb, "  BorderColor Black")
-	fmt.Fprintln(v.sb, "  ArrowColor Crimson")
+	fmt.Fprintln(v.stringBuilder, "left to right direction")
+	fmt.Fprintln(v.stringBuilder, "scale max 16384 height")
+	fmt.Fprintln(v.stringBuilder, "hide empty description")
+	fmt.Fprintln(v.stringBuilder, "skinparam state {")
+	fmt.Fprintln(v.stringBuilder, "  BackgroundColor FloralWhite")
+	fmt.Fprintln(v.stringBuilder, "  BorderColor Black")
+	fmt.Fprintln(v.stringBuilder, "  ArrowColor Crimson")
 	if viewParams.highLightColor != "" {
-		fmt.Fprintln(v.sb, "  BackgroundColor<<highlight>> "+viewParams.highLightColor)
+		fmt.Fprintln(v.stringBuilder, "  BackgroundColor<<highlight>> "+viewParams.highLightColor)
 	}
 	if viewParams.arrowColor != "" {
-		fmt.Fprintln(v.sb, "  ArrowColor "+viewParams.arrowColor)
+		fmt.Fprintln(v.stringBuilder, "  ArrowColor "+viewParams.arrowColor)
 	}
 
 	if viewParams.indirectArrowColor != "" && viewParams.indirectArrowColor != "none" {
-		fmt.Fprintln(v.sb, "  ArrowColor<<indirect>> "+viewParams.indirectArrowColor)
-		fmt.Fprintln(v.sb, "  ArrowColor<<internal>> "+viewParams.indirectArrowColor)
+		fmt.Fprintln(v.stringBuilder, "  ArrowColor<<indirect>> "+viewParams.indirectArrowColor)
+		fmt.Fprintln(v.stringBuilder, "  ArrowColor<<internal>> "+viewParams.indirectArrowColor)
 	}
-	fmt.Fprintln(v.sb, "}")
+	fmt.Fprintln(v.stringBuilder, "}")
 
 	v.buildClusterForStateView(params.integrations, viewParams.restrictBy)
 	var processed []string
@@ -277,10 +263,10 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 		appB := dep.Target.Name
 		epA := dep.Self.Endpoint
 		epB := dep.Target.Endpoint
-		_, restrictByAppA := v.m.Apps[appA].Attrs[viewParams.restrictBy]
-		_, restrictByAppB := v.m.Apps[appB].Attrs[viewParams.restrictBy]
-		_, restrictByEpA := v.m.Apps[appA].Endpoints[epA].Attrs[viewParams.restrictBy]
-		_, restrictByEpB := v.m.Apps[appB].Endpoints[epB].Attrs[viewParams.restrictBy]
+		_, restrictByAppA := v.mod.Apps[appA].Attrs[viewParams.restrictBy]
+		_, restrictByAppB := v.mod.Apps[appB].Attrs[viewParams.restrictBy]
+		_, restrictByEpA := v.mod.Apps[appA].Endpoints[epA].Attrs[viewParams.restrictBy]
+		_, restrictByEpB := v.mod.Apps[appB].Endpoints[epB].Attrs[viewParams.restrictBy]
 		if viewParams.restrictBy != "" && !restrictByAppA && !restrictByAppB {
 			continue
 		}
@@ -293,59 +279,50 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 		needsInt := appA != matchApp
 
 		var pubSubSrcPtrns []string
-		if v.m.Apps[appA].Endpoints[epA].Attrs["patterns"] != nil {
-			for _, v := range v.m.Apps[appA].Endpoints[epA].Attrs["patterns"].GetA().Elt {
+		if v.mod.Apps[appA].Endpoints[epA].Attrs["patterns"] != nil {
+			for _, v := range v.mod.Apps[appA].Endpoints[epA].Attrs["patterns"].GetA().Elt {
 				pubSubSrcPtrns = append(pubSubSrcPtrns, v.GetS())
 			}
 		}
 
-		tgtPtrns := utils.MakeStrSet()
-		if v.m.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"] != nil {
-			for _, v := range v.m.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"].GetA().Elt {
-				tgtPtrns.Insert(v.GetS())
+		targetPatterns := MakeStrSet()
+		if v.mod.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"] != nil {
+			for _, v := range v.mod.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"].GetA().Elt {
+				targetPatterns.Insert(v.GetS())
 			}
 		} else {
-			if v.m.Apps[matchApp].Attrs["patterns"] != nil {
-				for _, v := range v.m.Apps[matchApp].Attrs["patterns"].GetA().Elt {
-					tgtPtrns.Insert(v.GetS())
+			if v.mod.Apps[matchApp].Attrs["patterns"] != nil {
+				for _, v := range v.mod.Apps[matchApp].Attrs["patterns"].GetA().Elt {
+					targetPatterns.Insert(v.GetS())
 				}
 			}
 		}
-		stmts := NewStatements()
-		stmts.makeStmts(v.m.Apps[appA].Endpoints[epA].Stmt)
-		for _, stmt := range stmts.stmtSlice {
-			appBName := strings.Join(stmt.GetCall().GetTarget().GetPart(), " :: ")
-			if matchApp == appBName && matchEp == stmt.GetCall().Endpoint {
-				fmtVars := stmt.GetAttrs()
-				attrs := map[string]string{}
-
-				for k, v := range stmt.GetAttrs() {
-					attrs["@"+k] = v.GetS()
-				}
-				var srcPtrns []string
-				if fmtVars["patterns"] != nil {
-					for _, v := range fmtVars["patterns"].GetA().Elt {
-						srcPtrns = append(srcPtrns, v.GetS())
-					}
-				} else {
-					srcPtrns = pubSubSrcPtrns
-				}
-				var ptrns string
-				if srcPtrns != nil || tgtPtrns != nil {
-					ptrns = strings.Join(srcPtrns, ", ") + " → " + strings.Join(tgtPtrns.ToSlice(), ", ")
-				} else {
-					ptrns = ""
-				}
-				attrs["patterns"] = ptrns
-				if needsInt {
-					attrs["needs_int"] = strconv.FormatBool(needsInt)
-				}
-				label = utils.ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
-			}
+		attrs := map[string]string{}
+		for k, v := range dep.Statement.GetAttrs() {
+			attrs["@"+k] = v.GetS()
 		}
+		var srcPtrns []string
+		if dep.Statement.GetAttrs()["patterns"] != nil {
+			for _, v := range dep.Statement.GetAttrs()["patterns"].GetA().Elt {
+				srcPtrns = append(srcPtrns, v.GetS())
+			}
+		} else {
+			srcPtrns = pubSubSrcPtrns
+		}
+		var ptrns string
+		if srcPtrns != nil || targetPatterns != nil {
+			ptrns = strings.Join(srcPtrns, ", ") + " → " + strings.Join(targetPatterns.ToSlice(), ", ")
+		} else {
+			ptrns = ""
+		}
+		attrs["patterns"] = ptrns
+		if needsInt {
+			attrs["needs_int"] = strconv.FormatBool(needsInt)
+		}
+		label = ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
 
 		flow := strings.Join([]string{appA, epB, appB, epB}, ".")
-		isPubSub := v.m.Apps[appA].Endpoints[epA].GetIsPubsub()
+		isPubSub := v.mod.Apps[appA].Endpoints[epA].GetIsPubsub()
 		epBClient := epB + " client"
 
 		if appA != appB {
@@ -353,8 +330,8 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 				if label != "" {
 					label = " : " + label
 				}
-				fmt.Fprintf(v.sb, "%s -%s> %s%s", v.VarManagerForState(appA+" : "+epA), "[#blue]", v.VarManagerForState(appB+" : "+epB), label)
-				fmt.Fprintln(v.sb)
+				fmt.Fprintf(v.stringBuilder, "%s -%s> %s%s", v.VarManagerForState(appA+" : "+epA), "[#blue]", v.VarManagerForState(appB+" : "+epB), label)
+				fmt.Fprintln(v.stringBuilder)
 			} else {
 				color := ""
 				if viewParams.indirectArrowColor == "" {
@@ -362,11 +339,11 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 				} else {
 					color = "[#" + viewParams.indirectArrowColor + "]-"
 				}
-				fmt.Fprintf(v.sb, "%s -%s> %s", v.VarManagerForState(appA+" : "+epA), color, v.VarManagerForState(appA+" : "+epBClient))
-				fmt.Fprintln(v.sb)
+				fmt.Fprintf(v.stringBuilder, "%s -%s> %s", v.VarManagerForState(appA+" : "+epA), color, v.VarManagerForState(appA+" : "+epBClient))
+				fmt.Fprintln(v.stringBuilder)
 				if !stringInSlice(flow, processed) {
-					fmt.Fprintf(v.sb, "%s -%s> %s : %s", v.VarManagerForState(appA+" : "+epBClient), "[#black]", v.VarManagerForState(appB+" : "+epB), label)
-					fmt.Fprintln(v.sb)
+					fmt.Fprintf(v.stringBuilder, "%s -%s> %s : %s", v.VarManagerForState(appA+" : "+epBClient), "[#black]", v.VarManagerForState(appB+" : "+epB), label)
+					fmt.Fprintln(v.stringBuilder)
 					processed = append(processed, flow)
 				}
 			}
@@ -377,12 +354,12 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 			} else {
 				color = "[#" + viewParams.indirectArrowColor + "]-"
 			}
-			fmt.Fprintf(v.sb, "%s -%s> %s%s", v.VarManagerForState(appA+" : "+epA), color, v.VarManagerForState(appB+" : "+epB), label)
-			fmt.Fprintln(v.sb)
+			fmt.Fprintf(v.stringBuilder, "%s -%s> %s%s", v.VarManagerForState(appA+" : "+epA), color, v.VarManagerForState(appB+" : "+epB), label)
+			fmt.Fprintln(v.stringBuilder)
 		}
 	}
-	fmt.Fprintln(v.sb, "@enduml")
-	return v.sb.String()
+	fmt.Fprintln(v.stringBuilder, "@enduml")
+	return v.stringBuilder.String()
 
 }
 
@@ -412,17 +389,17 @@ func (v *IntsDiagramVisitor) drawComponentView(viewParams viewParams, params *In
 					if direct == nil {
 						indirect = " <<indirect>>"
 					}
-					fmt.Fprintf(v.sb, "%s --> %s%s", v.VarManagerForComponent(appA, nameMap), v.VarManagerForComponent(appB, nameMap), indirect)
-					fmt.Fprintln(v.sb)
+					fmt.Fprintf(v.stringBuilder, "%s --> %s%s", v.VarManagerForComponent(appA, nameMap), v.VarManagerForComponent(appB, nameMap), indirect)
+					fmt.Fprintln(v.stringBuilder)
 					callsDrawn[*apps] = struct{}{}
 				}
 			}
 		}
 		for _, app := range params.apps {
-			for _, mixin := range v.m.Apps[app].GetMixin2() {
+			for _, mixin := range v.mod.Apps[app].GetMixin2() {
 				mixinName := strings.Join(mixin.Name.Part, " :: ")
-				fmt.Fprintf(v.sb, "%s <|.. %s", v.VarManagerForComponent(mixinName, nameMap), v.VarManagerForComponent(app, nameMap))
-				fmt.Fprintln(v.sb)
+				fmt.Fprintf(v.stringBuilder, "%s <|.. %s", v.VarManagerForComponent(mixinName, nameMap), v.VarManagerForComponent(app, nameMap))
+				fmt.Fprintln(v.stringBuilder)
 			}
 		}
 	}
@@ -453,8 +430,8 @@ func (v *IntsDiagramVisitor) drawSystemView(viewParams viewParams, params *IntsP
 				if direct == nil {
 					indirect = " <<indirect>>"
 				}
-				fmt.Fprintf(v.sb, "%s --> %s%s", v.VarManagerForComponent(appA, nameMap), v.VarManagerForComponent(appB, nameMap), indirect)
-				fmt.Fprintln(v.sb)
+				fmt.Fprintf(v.stringBuilder, "%s --> %s%s", v.VarManagerForComponent(appA, nameMap), v.VarManagerForComponent(appB, nameMap), indirect)
+				fmt.Fprintln(v.stringBuilder)
 				callsDrawn[*apps] = struct{}{}
 			}
 		}
@@ -463,40 +440,40 @@ func (v *IntsDiagramVisitor) drawSystemView(viewParams viewParams, params *IntsP
 
 func (v *IntsDiagramVisitor) generateComponentView(args *Args, viewParams viewParams, params *IntsParam) string {
 
-	fmt.Fprintln(v.sb, "@startuml")
+	fmt.Fprintln(v.stringBuilder, "@startuml")
 	if viewParams.diagramTitle != "" {
-		fmt.Fprintln(v.sb, "title "+viewParams.diagramTitle)
+		fmt.Fprintln(v.stringBuilder, "title "+viewParams.diagramTitle)
 	}
-	fmt.Fprintln(v.sb, "hide stereotype")
-	fmt.Fprintln(v.sb, "scale max 16384 height")
-	fmt.Fprintln(v.sb, "skinparam component {")
-	fmt.Fprintln(v.sb, "  BackgroundColor FloralWhite")
-	fmt.Fprintln(v.sb, "  BorderColor Black")
-	fmt.Fprintln(v.sb, "  ArrowColor Crimson")
+	fmt.Fprintln(v.stringBuilder, "hide stereotype")
+	fmt.Fprintln(v.stringBuilder, "scale max 16384 height")
+	fmt.Fprintln(v.stringBuilder, "skinparam component {")
+	fmt.Fprintln(v.stringBuilder, "  BackgroundColor FloralWhite")
+	fmt.Fprintln(v.stringBuilder, "  BorderColor Black")
+	fmt.Fprintln(v.stringBuilder, "  ArrowColor Crimson")
 	if viewParams.highLightColor != "" {
-		fmt.Fprintln(v.sb, "  BackgroundColor<<highlight>> "+viewParams.highLightColor)
+		fmt.Fprintln(v.stringBuilder, "  BackgroundColor<<highlight>> "+viewParams.highLightColor)
 	}
 	if viewParams.arrowColor != "" {
-		fmt.Fprintln(v.sb, "  ArrowColor "+viewParams.arrowColor)
+		fmt.Fprintln(v.stringBuilder, "  ArrowColor "+viewParams.arrowColor)
 	}
 
 	if viewParams.indirectArrowColor != "" && viewParams.indirectArrowColor != "none" {
-		fmt.Fprintln(v.sb, "  ArrowColor<<indirect>> "+viewParams.indirectArrowColor)
+		fmt.Fprintln(v.stringBuilder, "  ArrowColor<<indirect>> "+viewParams.indirectArrowColor)
 	}
-	fmt.Fprintln(v.sb, "}")
+	fmt.Fprintln(v.stringBuilder, "}")
 
 	nameMap := map[string]string{}
 	if args.clustered || viewParams.endptAttrs["view"].GetS() == "clustered" {
 		nameMap = v.buildClusterForComponentView(params.apps)
 	}
 	v.drawComponentView(viewParams, params, nameMap)
-	fmt.Fprintln(v.sb, "@enduml")
-	return v.sb.String()
+	fmt.Fprintln(v.stringBuilder, "@enduml")
+	return v.stringBuilder.String()
 }
 
 func GenerateView(args *Args, params *IntsParam, mod *sysl.Module) string {
-	var sb strings.Builder
-	v := MakeIntsDiagramVisitor(mod, &sb, params.highlights, args.project)
+	var stringBuilder strings.Builder
+	v := MakeIntsDiagramVisitor(mod, &stringBuilder, params.highlights, args.project)
 	restrictBy := ""
 	if params.endpt.Attrs["restrict_by"] != nil {
 		restrictBy = params.endpt.Attrs["restrict_by"].GetS()
@@ -514,9 +491,9 @@ func GenerateView(args *Args, params *IntsParam, mod *sysl.Module) string {
 		"eplongname": params.endpt.LongName,
 	}
 	if appAttrs["title"].GetS() != "" {
-		diagramTitle = utils.ParseFmt(attrs, appAttrs["title"].GetS())
+		diagramTitle = ParseFmt(attrs, appAttrs["title"].GetS())
 	} else {
-		diagramTitle = utils.ParseFmt(attrs, args.title)
+		diagramTitle = ParseFmt(attrs, args.title)
 	}
 
 	viewParams := &viewParams{
@@ -528,12 +505,12 @@ func GenerateView(args *Args, params *IntsParam, mod *sysl.Module) string {
 		diagramTitle:       diagramTitle,
 	}
 
-	fmt.Fprintln(&sb, "''''''''''''''''''''''''''''''''''''''''''")
-	fmt.Fprintln(&sb, "''                                      ''")
-	fmt.Fprintln(&sb, "''  AUTOGENERATED CODE -- DO NOT EDIT!  ''")
-	fmt.Fprintln(&sb, "''                                      ''")
-	fmt.Fprintln(&sb, "''''''''''''''''''''''''''''''''''''''''''")
-	fmt.Fprintln(&sb)
+	fmt.Fprintln(&stringBuilder, "''''''''''''''''''''''''''''''''''''''''''")
+	fmt.Fprintln(&stringBuilder, "''                                      ''")
+	fmt.Fprintln(&stringBuilder, "''  AUTOGENERATED CODE -- DO NOT EDIT!  ''")
+	fmt.Fprintln(&stringBuilder, "''                                      ''")
+	fmt.Fprintln(&stringBuilder, "''''''''''''''''''''''''''''''''''''''''''")
+	fmt.Fprintln(&stringBuilder)
 
 	if args.epa || endptAttrs["view"].GetS() == "epa" {
 		return v.generateStateView(args, *viewParams, params)
@@ -551,7 +528,7 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-func getApplicationAttrs(m *sysl.Module, appName string) map[string]string {
+func getAttrs(m *sysl.Module, appName string) map[string]string {
 	val := map[string]string{}
 	if app, ok := m.Apps[appName]; ok {
 		attrs := app.Attrs
@@ -561,33 +538,4 @@ func getApplicationAttrs(m *sysl.Module, appName string) map[string]string {
 		return val
 	}
 	return val
-}
-
-func (stmts *Statements) makeStmts(statements []*sysl.Statement) {
-	for _, stmt := range statements {
-		switch c := stmt.GetStmt().(type) {
-		case *sysl.Statement_Call:
-			stmts.stmtSlice = append(stmts.stmtSlice, stmt)
-		case *sysl.Statement_Action:
-			continue
-		case *sysl.Statement_Cond:
-			stmts.makeStmts(c.Cond.GetStmt())
-		case *sysl.Statement_Loop:
-			stmts.makeStmts(c.Loop.GetStmt())
-		case *sysl.Statement_LoopN:
-			stmts.makeStmts(c.LoopN.GetStmt())
-		case *sysl.Statement_Foreach:
-			stmts.makeStmts(c.Foreach.GetStmt())
-		case *sysl.Statement_Group:
-			stmts.makeStmts(c.Group.GetStmt())
-		case *sysl.Statement_Alt:
-			for _, choice := range c.Alt.GetChoice() {
-				stmts.makeStmts(choice.GetStmt())
-			}
-		case *sysl.Statement_Ret:
-			continue
-		default:
-			panic("No statement!")
-		}
-	}
 }

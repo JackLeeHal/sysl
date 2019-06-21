@@ -1,4 +1,4 @@
-package seqs
+package main
 
 import (
 	"github.com/anz-bank/sysl/src/proto"

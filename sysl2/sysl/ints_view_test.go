@@ -1,4 +1,4 @@
-package integration
+package main
 
 import (
 	"strings"
@@ -10,12 +10,12 @@ import (
 
 func TestVarManagerForComponent(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
-		symbols:    map[string]*_var{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
+		symbols:       map[string]*_var{},
 	}
 
 	//When
@@ -27,11 +27,11 @@ func TestVarManagerForComponent(t *testing.T) {
 
 func TestVarManagerForComponentWithNameMap(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
 		symbols: map[string]*_var{
 			"appName": &_var{
 				alias: "_1",
@@ -50,11 +50,11 @@ func TestVarManagerForComponentWithNameMap(t *testing.T) {
 
 func TestVarManagerForComponentWithExistingName(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
 		symbols: map[string]*_var{
 			"test": &_var{
 				alias: "_1",
@@ -71,10 +71,10 @@ func TestVarManagerForComponentWithExistingName(t *testing.T) {
 
 func TestVarManagerForState(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb: &sb,
-		m: &sysl.Module{
+		stringBuilder: &stringBuilder,
+		mod: &sysl.Module{
 			Apps: map[string]*sysl.Application{
 				"a": &sysl.Application{
 					Endpoints: map[string]*sysl.Endpoint{
@@ -96,10 +96,10 @@ func TestVarManagerForState(t *testing.T) {
 
 func TestVarManagerForStateWithExistingName(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb: &sb,
-		m: &sysl.Module{
+		stringBuilder: &stringBuilder,
+		mod: &sysl.Module{
 			Apps: map[string]*sysl.Application{
 				"a": &sysl.Application{
 					Endpoints: map[string]*sysl.Endpoint{
@@ -129,12 +129,12 @@ func TestVarManagerForStateWithExistingName(t *testing.T) {
 
 func TestVarManagerForTopState(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
-		topSymbols: map[string]*_topVar{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
+		topSymbols:    map[string]*_topVar{},
 	}
 
 	//When
@@ -146,11 +146,11 @@ func TestVarManagerForTopState(t *testing.T) {
 
 func TestVarManagerForTopStateWithExistingName(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
 		topSymbols: map[string]*_topVar{
 			"a : b": &_topVar{
 				topAlias: "_1",
@@ -167,10 +167,10 @@ func TestVarManagerForTopStateWithExistingName(t *testing.T) {
 
 func TestBuildClusterForStateView(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb: &sb,
-		m: &sysl.Module{
+		stringBuilder: &stringBuilder,
+		mod: &sysl.Module{
 			Apps: map[string]*sysl.Application{
 				"a": &sysl.Application{
 					Endpoints: map[string]*sysl.Endpoint{
@@ -220,18 +220,18 @@ func TestBuildClusterForStateView(t *testing.T) {
 state "" as X_1 {
   state "" as _2
 }
-`, v.sb.String())
+`, v.stringBuilder.String())
 }
 
 func TestBuildClusterForComponentView(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
-		topSymbols: map[string]*_topVar{},
-		symbols:    map[string]*_var{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
+		topSymbols:    map[string]*_topVar{},
+		symbols:       map[string]*_var{},
 	}
 	apps := []string{"a :: A", "a :: A", "b :: B", "c :: C"}
 
@@ -242,12 +242,12 @@ func TestBuildClusterForComponentView(t *testing.T) {
 	assert.Equal(t, `package "a" {
 [] as _0
 }
-`, v.sb.String())
+`, v.stringBuilder.String())
 }
 
 func TestGenerateComponentView(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	viewParams := &viewParams{}
 	deps := []*AppDependency{
 		&AppDependency{
@@ -266,8 +266,8 @@ func TestGenerateComponentView(t *testing.T) {
 	}
 	args := &Args{}
 	v := &IntsDiagramVisitor{
-		sb: &sb,
-		m: &sysl.Module{
+		stringBuilder: &stringBuilder,
+		mod: &sysl.Module{
 			Apps: map[string]*sysl.Application{
 				"a": &sysl.Application{
 					Endpoints: map[string]*sysl.Endpoint{
@@ -310,12 +310,12 @@ skinparam component {
 [] as _1
 _0 --> _1 <<indirect>>
 @enduml
-`, v.sb.String())
+`, v.stringBuilder.String())
 }
 
 func TestGenerateStateView(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	stmts := []*sysl.Statement{
 		{
 			Stmt: &sysl.Statement_Call{
@@ -418,8 +418,8 @@ func TestGenerateStateView(t *testing.T) {
 	}
 	args := &Args{}
 	v := &IntsDiagramVisitor{
-		sb: &sb,
-		m: &sysl.Module{
+		stringBuilder: &stringBuilder,
+		mod: &sysl.Module{
 			Apps: map[string]*sysl.Application{
 				"a": &sysl.Application{
 					Endpoints: map[string]*sysl.Endpoint{
@@ -470,7 +470,7 @@ state "" as X_1 {
 _0 -[#silver]-> _1
 _1 -[#black]> _2 : 
 @enduml
-`, v.sb.String())
+`, v.stringBuilder.String())
 }
 
 func TestGenerateView(t *testing.T) {
@@ -547,11 +547,11 @@ _0 --> _1 <<indirect>>
 
 func TestDrawSystemView(t *testing.T) {
 	//Given
-	var sb strings.Builder
+	var stringBuilder strings.Builder
 	v := &IntsDiagramVisitor{
-		sb:         &sb,
-		m:          &sysl.Module{},
-		highlights: map[string]struct{}{},
+		stringBuilder: &stringBuilder,
+		mod:           &sysl.Module{},
+		highlights:    map[string]struct{}{},
 		symbols: map[string]*_var{
 			"test": &_var{
 				alias: "_1",
@@ -589,7 +589,7 @@ func TestDrawSystemView(t *testing.T) {
 	assert.Equal(t, `[] as _1
 [] as _2
 _1 --> _2 <<indirect>>
-`, v.sb.String())
+`, v.stringBuilder.String())
 
 }
 

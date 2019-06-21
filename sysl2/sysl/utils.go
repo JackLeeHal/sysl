@@ -1,4 +1,4 @@
-package seqs
+package main
 
 import (
 	"fmt"
@@ -69,10 +69,6 @@ func copyBlackboxes(bbs map[string]string) map[string]string {
 	}
 
 	return m
-}
-
-func getAppName(appName *sysl.AppName) string {
-	return strings.Join(appName.Part, " :: ")
 }
 
 func getApplicationAttrs(m *sysl.Module, appName string) map[string]*sysl.Attribute {

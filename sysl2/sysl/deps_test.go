@@ -1,19 +1,17 @@
-package integration
+package main
 
 import (
 	"testing"
 
 	"github.com/anz-bank/sysl/src/proto"
-	"github.com/anz-bank/sysl/sysl2/sysl/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAppDependency_String(t *testing.T) {
 	// Given
-	s := MakeAppElement("AppA", "EndptA")
-	tar := MakeAppElement("AppB", "EndptB")
-	dep := MakeAppDependency(s, tar)
-	expected := "s.name: AppA, s.end: EndptA, t.name: AppB, t.end: EndptB"
+	stmt := &sysl.Statement{}
+	dep := MakeAppDependency(MakeAppElement("AppA", "EndptA"), MakeAppElement("AppB", "EndptB"), stmt)
+	expected := "AppA:EndptA:AppB:EndptB"
 
 	// When
 	actual := dep.String()
@@ -107,19 +105,27 @@ func TestCollectCallStatements(t *testing.T) {
 			},
 		},
 	}
-	cs := NewCallSlice()
-	expected := []*sysl.Call{
+	cs := NewCallStatementSlice()
+	expected := []*sysl.Statement{
 		{
-			Target: &sysl.AppName{
-				Part: []string{"AppA"},
+			Stmt: &sysl.Statement_Call{
+				Call: &sysl.Call{
+					Target: &sysl.AppName{
+						Part: []string{"AppA"},
+					},
+					Endpoint: "EndptA",
+				},
 			},
-			Endpoint: "EndptA",
 		},
 		{
-			Target: &sysl.AppName{
-				Part: []string{"AppB"},
+			Stmt: &sysl.Statement_Call{
+				Call: &sysl.Call{
+					Target: &sysl.AppName{
+						Part: []string{"AppB"},
+					},
+					Endpoint: "EndptB",
+				},
 			},
-			Endpoint: "EndptB",
 		},
 	}
 
@@ -234,22 +240,19 @@ var mod = &sysl.Module{
 func TestFindHighlightApps(t *testing.T) {
 	// Given
 	ds := NewDependencySet()
-	s := MakeAppElement("AppA", "EndptA")
-	tar := MakeAppElement("AppB", "EndptB")
-	dep := MakeAppDependency(s, tar)
-	ds.Deps[dep] = struct{}{}
+	stmt := &sysl.Statement{}
+	dep := MakeAppDependency(MakeAppElement("AppA", "EndptA"), MakeAppElement("AppB", "EndptB"), stmt)
+	ds.Deps[dep.String()] = dep
 
-	s1 := MakeAppElement("AppC", "EndptC")
-	tar1 := MakeAppElement("AppD", "EndptD")
-	dep1 := MakeAppDependency(s1, tar1)
-	ds.Deps[dep1] = struct{}{}
+	dep1 := MakeAppDependency(MakeAppElement("AppC", "EndptC"), MakeAppElement("AppD", "EndptD"), stmt)
+	ds.Deps[dep1.String()] = dep1
 
-	excludes := utils.MakeStrSet("AppC", "AppD")
-	integrations := utils.MakeStrSet("AppA", "AppB")
-	expected := utils.MakeStrSet("AppA", "AppB")
+	excludes := MakeStrSet("AppC", "AppD")
+	integrations := MakeStrSet("AppA", "AppB")
+	expected := MakeStrSet("AppA", "AppB")
 
 	// When
-	actual := FindApps(mod, excludes, integrations, ds, true)
+	actual := FindApps(mod, excludes, integrations, ds.ToSlice(), true)
 
 	// Then
 	assert.Equal(t, actual, expected)
@@ -258,22 +261,19 @@ func TestFindHighlightApps(t *testing.T) {
 func TestFindNoneHighlightApps(t *testing.T) {
 	// Given
 	ds := NewDependencySet()
-	s := MakeAppElement("AppA", "EndptA")
-	tar := MakeAppElement("AppB", "EndptB")
-	dep := MakeAppDependency(s, tar)
-	ds.Deps[dep] = struct{}{}
+	stmt := &sysl.Statement{}
+	dep := MakeAppDependency(MakeAppElement("AppA", "EndptA"), MakeAppElement("AppB", "EndptB"), stmt)
+	ds.Deps[dep.String()] = dep
 
-	s1 := MakeAppElement("AppC", "EndptC")
-	tar1 := MakeAppElement("AppD", "EndptD")
-	dep1 := MakeAppDependency(s1, tar1)
-	ds.Deps[dep1] = struct{}{}
+	dep1 := MakeAppDependency(MakeAppElement("AppC", "EndptC"), MakeAppElement("AppD", "EndptD"), stmt)
+	ds.Deps[dep1.String()] = dep1
 
-	excludes := utils.MakeStrSet("AppC", "AppD")
-	integrations := utils.MakeStrSet("AppA", "AppB")
-	expected := utils.MakeStrSet("AppA", "AppB")
+	excludes := MakeStrSet("AppC", "AppD")
+	integrations := MakeStrSet("AppA", "AppB")
+	expected := MakeStrSet("AppA", "AppB")
 
 	// When
-	actual := FindApps(mod, excludes, integrations, ds, false)
+	actual := FindApps(mod, excludes, integrations, ds.ToSlice(), false)
 
 	// Then
 	assert.Equal(t, actual, expected)
@@ -282,22 +282,19 @@ func TestFindNoneHighlightApps(t *testing.T) {
 func TestNotFindNoneHighlightApps(t *testing.T) {
 	// Given
 	ds := NewDependencySet()
-	s := MakeAppElement("AppA", "EndptA")
-	tar := MakeAppElement("AppB", "EndptB")
-	dep := MakeAppDependency(s, tar)
-	ds.Deps[dep] = struct{}{}
+	stmt := &sysl.Statement{}
+	dep := MakeAppDependency(MakeAppElement("AppA", "EndptA"), MakeAppElement("AppB", "EndptB"), stmt)
+	ds.Deps[dep.String()] = dep
 
-	s1 := MakeAppElement("AppC", "EndptC")
-	tar1 := MakeAppElement("AppD", "EndptD")
-	dep1 := MakeAppDependency(s1, tar1)
-	ds.Deps[dep1] = struct{}{}
+	dep1 := MakeAppDependency(MakeAppElement("AppC", "EndptC"), MakeAppElement("AppD", "EndptD"), stmt)
+	ds.Deps[dep1.String()] = dep1
 
-	excludes := utils.MakeStrSet("AppC", "AppD")
-	integrations := utils.MakeStrSet("AppE", "AppF")
-	expected := utils.MakeStrSet()
+	excludes := MakeStrSet("AppC", "AppD")
+	integrations := MakeStrSet("AppE", "AppF")
+	expected := MakeStrSet()
 
 	// When
-	actual := FindApps(mod, excludes, integrations, ds, false)
+	actual := FindApps(mod, excludes, integrations, ds.ToSlice(), false)
 
 	// Then
 	assert.Equal(t, actual, expected)
@@ -306,32 +303,28 @@ func TestNotFindNoneHighlightApps(t *testing.T) {
 func TestFindIntegrations(t *testing.T) {
 	// Given
 	ds := NewDependencySet()
+	stmt := &sysl.Statement{}
 	expected := NewDependencySet()
-	s := MakeAppElement("AppA", "EndptA")
 	tar := MakeAppElement("AppB", "EndptB")
-	dep := MakeAppDependency(s, tar)
-	ds.Deps[dep] = struct{}{}
+	dep := MakeAppDependency(MakeAppElement("AppA", "EndptA"), tar, stmt)
+	ds.Deps[dep.String()] = dep
 
-	s1 := MakeAppElement("AppC", "EndptC")
-	tar1 := MakeAppElement("AppD", "EndptD")
-	dep1 := MakeAppDependency(s1, tar1)
-	ds.Deps[dep1] = struct{}{}
+	dep1 := MakeAppDependency(MakeAppElement("AppC", "EndptC"), MakeAppElement("AppD", "EndptD"), stmt)
+	ds.Deps[dep1.String()] = dep1
 
-	apps := utils.MakeStrSet("AppA", "AppB")
-	excludes := utils.MakeStrSet("AppC")
-	passthrough := utils.MakeStrSet("AppB", "AppE", "AppF")
+	apps := MakeStrSet("AppA", "AppB")
+	excludes := MakeStrSet("AppC")
+	passthrough := MakeStrSet("AppB", "AppE", "AppF")
 
-	e := MakeAppElement("AppE", "EndptE")
-	dep2 := MakeAppDependency(tar, e)
-	expected.Deps[dep] = struct{}{}
-	expected.Deps[dep2] = struct{}{}
+	dep2 := MakeAppDependency(tar, MakeAppElement("AppE", "EndptE"), stmt)
+	expected.Deps[dep.String()] = dep
+	expected.Deps[dep2.String()] = dep2
 
 	// When
 	actual := ds.FindIntegrations(apps, excludes, passthrough, mod)
 
 	// Then
-	assert.Equal(t, actual.Deps[dep], expected.Deps[dep])
-	assert.Equal(t, actual.Deps[dep2], expected.Deps[dep2])
+	assert.Equal(t, len(actual.Deps), len(expected.Deps))
 }
 
 func TestDependencySet_ResolveDependencies(t *testing.T) {
@@ -339,7 +332,7 @@ func TestDependencySet_ResolveDependencies(t *testing.T) {
 	ds := NewDependencySet()
 
 	// When
-	ds.ResolveDependencies(mod)
+	ds.CollectAppDependencies(mod)
 
 	// Then
 	assert.Equal(t, 1, len(ds.Deps))
@@ -347,8 +340,8 @@ func TestDependencySet_ResolveDependencies(t *testing.T) {
 
 func TestSubWhenParentAndChildEmpty(t *testing.T) {
 	// Given
-	c := utils.MakeStrSet()
-	p := utils.MakeStrSet()
+	c := MakeStrSet()
+	p := MakeStrSet()
 	expected := true
 
 	// When
@@ -360,8 +353,8 @@ func TestSubWhenParentAndChildEmpty(t *testing.T) {
 
 func TestSubWhenParentEmpty(t *testing.T) {
 	// Given
-	c := utils.MakeStrSet("A")
-	p := utils.MakeStrSet()
+	c := MakeStrSet("A")
+	p := MakeStrSet()
 	expected := false
 
 	// When
@@ -373,26 +366,12 @@ func TestSubWhenParentEmpty(t *testing.T) {
 
 func TestSubWhenChildEmpty(t *testing.T) {
 	// Given
-	c := utils.MakeStrSet()
-	p := utils.MakeStrSet("A")
+	c := MakeStrSet()
+	p := MakeStrSet("A")
 	expected := true
 
 	// When
 	actual := isSub(c, p)
-
-	// Then
-	assert.Equal(t, expected, actual)
-}
-
-func TestBuildStringBoolFilter(t *testing.T) {
-	// Given
-	i := []string{"a"}
-	expected := map[string]bool{
-		"a": true,
-	}
-
-	// When
-	actual := buildStringBoolFilter(i)
 
 	// Then
 	assert.Equal(t, expected, actual)

@@ -1,4 +1,4 @@
-package utils
+package main
 
 import (
 	"regexp"
@@ -190,13 +190,4 @@ func (s *FmtTreeShapeListener) exitFmt() {
 			s.resultStack[resultLen-1] = s.resultStack[resultLen-1] + noStmt
 		}
 	}
-}
-
-func removePercentSymbol(src string) string {
-	substitute := string([]byte{1})
-	src = strings.Replace(src, "%%", substitute, -1)
-	src = strings.Replace(src, "%", "", -1)
-	src = strings.Replace(src, substitute, "%", -1)
-
-	return src
 }
