@@ -83,7 +83,9 @@ func (v *IntsDiagramVisitor) VarManagerForComponent(appName string, nameMap map[
 	alias := fmt.Sprintf("_%d", i)
 	attrs := getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label := ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label := fp.Parse(attrs)
+
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -108,7 +110,9 @@ func (v *IntsDiagramVisitor) VarManagerForTopState(appName string) string {
 
 	attrs = getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = fp.Parse(attrs)
+
 	ts := &_topVar{
 		topLabel: label,
 		topAlias: alias,
@@ -144,7 +148,9 @@ func (v *IntsDiagramVisitor) VarManagerForState(name string) string {
 		}
 	}
 	attrs["appname"] = epName
-	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = fp.Parse(attrs)
+
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -319,7 +325,8 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 		if needsInt {
 			attrs["needs_int"] = strconv.FormatBool(needsInt)
 		}
-		label = ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
+		fp := MakeFormatParser(params.app.Attrs["epfmt"].GetS())
+		label = fp.Parse(attrs)
 
 		flow := strings.Join([]string{appA, epB, appB, epB}, ".")
 		isPubSub := v.mod.Apps[appA].Endpoints[epA].GetIsPubsub()

@@ -62,10 +62,10 @@ func TestFmtWithRecursion(t *testing.T) {
 	//Given
 	input := `%(@ggg?//«%(@ggg)»//**%(patterns? %(patterns~/\btba|tbd\b/?<color red>%(patterns)</color>|<color green>%(patterns)</color>)| <color red>pattern?</color>)**\n|%(int?<color red>(missing INT%)</color>\n))%(epname)%(args?\n(%(args)%))`
 	attr := map[string]string{
-		"@s1":       "TT",
-		"patterns":  "rt → hp, ap",
-		"int": "int",
-		"epname":    "searchP",
+		"@s1":      "TT",
+		"patterns": "rt → hp, ap",
+		"int":      "int",
+		"epname":   "searchP",
 	}
 
 	//When
