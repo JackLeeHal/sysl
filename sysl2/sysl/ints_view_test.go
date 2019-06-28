@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anz-bank/sysl/src/proto"
+	sysl "github.com/anz-bank/sysl/src/proto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -327,77 +327,6 @@ func TestGenerateStateView(t *testing.T) {
 				},
 			},
 		},
-		{
-			Stmt: &sysl.Statement_Action{
-				Action: &sysl.Action{
-					Action: "Get",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Ret{
-				Ret: &sysl.Return{
-					Payload: "Return A",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Cond{
-				Cond: &sysl.Cond{
-					Stmt: []*sysl.Statement{
-						{
-							Stmt: &sysl.Statement_Call{
-								Call: &sysl.Call{
-									Target: &sysl.AppName{
-										Part: []string{"AppB"},
-									},
-									Endpoint: "EndptB",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Loop{
-				Loop: &sysl.Loop{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_LoopN{
-				LoopN: &sysl.LoopN{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Foreach{
-				Foreach: &sysl.Foreach{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Group{
-				Group: &sysl.Group{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Alt{
-				Alt: &sysl.Alt{
-					Choice: []*sysl.Alt_Choice{
-						{
-							Stmt: []*sysl.Statement{},
-						},
-					},
-				},
-			},
-		},
 	}
 	viewParams := &viewParams{}
 	deps := []*AppDependency{
@@ -409,6 +338,9 @@ func TestGenerateStateView(t *testing.T) {
 			Target: &AppElement{
 				Name:     "b",
 				Endpoint: "epb",
+			},
+			Statement: &sysl.Statement{
+				Stmt: &sysl.Statement_Call{},
 			},
 		},
 	}
@@ -440,8 +372,18 @@ func TestGenerateStateView(t *testing.T) {
 						},
 					},
 				},
+				"test": &sysl.Application{
+					Attrs: map[string]*sysl.Attribute{
+						"appfmt": {
+							Attribute: &sysl.Attribute_S{
+								"test",
+							},
+						},
+					},
+				},
 			},
 		},
+		project:    "test",
 		highlights: map[string]struct{}{},
 		topSymbols: map[string]*_topVar{},
 		symbols:    map[string]*_var{},
@@ -460,12 +402,12 @@ skinparam state {
   BorderColor Black
   ArrowColor Crimson
 }
-state "" as X_0 {
-  state "" as _0
-  state "" as _1
+state "test" as X_0 {
+  state "test" as _0
+  state "test" as _1
 }
-state "" as X_1 {
-  state "" as _2
+state "test" as X_1 {
+  state "test" as _2
 }
 _0 -[#silver]-> _1
 _1 -[#black]> _2 : 

@@ -192,7 +192,7 @@ func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, res
 	for _, k := range keys {
 		v.VarManagerForTopState(k)
 		strSet := MakeStrSet(clusters[k]...)
-		for _, m := range strSet.ToSlice() {
+		for _, m := range strSet.ToSortedSlice() {
 			v.VarManagerForState(k + " : " + m)
 		}
 		fmt.Fprintln(v.stringBuilder, "}")
