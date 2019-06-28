@@ -227,7 +227,7 @@ func getAndFmtParam(s *sysl.Module, params []*sysl.Param) []string {
 		pn := ""
 		if refType := v.GetType().GetTypeRef(); refType != nil {
 			if ref := refType.GetRef(); ref != nil {
-				an = GetAppName(ref.GetAppname())
+				an = getAppName(ref.GetAppname())
 				pn = strings.Join(ref.GetPath(), ".")
 			}
 		}

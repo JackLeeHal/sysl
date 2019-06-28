@@ -11,15 +11,16 @@ import (
 
 func TestGenerateIntegrations(t *testing.T) {
 	m, _ := Parse("demo/simple/sysl-ints.sysl", "../../")
+	stmt := &sysl.Statement{}
 	args := MakeArgs("", "Project", false, false)
 	apps := []string{"System1", "IntegratedSystem", "System2"}
 	highlights := MakeStrSet("IntegratedSystem", "System1", "System2")
 	s1 := MakeAppElement("IntegratedSystem", "integrated_endpoint_1")
 	t1 := MakeAppElement("System1", "endpoint")
-	dep1 := MakeAppDependency(s1, t1)
+	dep1 := MakeAppDependency(s1, t1, stmt)
 	s2 := MakeAppElement("IntegratedSystem", "integrated_endpoint_2")
 	t2 := MakeAppElement("System2", "endpoint")
-	dep2 := MakeAppDependency(s2, t2)
+	dep2 := MakeAppDependency(s2, t2, stmt)
 	deps := []*AppDependency{dep1, dep2}
 	endpt := &sysl.Endpoint{
 		Name: "_",

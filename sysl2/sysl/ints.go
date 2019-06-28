@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -38,8 +37,9 @@ func GenerateIntegrations(
 		// each one of these will be placed into the "integration" list
 		integrations := MakeStrSetFromActionStatement(endpt.GetStmt())
 
-		highlights := FindApps(mod, excludeStrSet, integrations, ds, true)
-		apps := FindApps(mod, excludeStrSet, highlights, ds, false)
+		arr := ds.ToSlice()
+		highlights := FindApps(mod, excludeStrSet, integrations, arr, true)
+		apps := FindApps(mod, excludeStrSet, highlights, arr, false)
 		apps = apps.Difference(excludes)
 		apps = apps.Difference(passthroughs)
 		output_dir := of.FmtOutput(project, epname, endpt.GetLongName(), endpt.GetAttrs())
@@ -53,10 +53,7 @@ func GenerateIntegrations(
 
 		// invoke generate_view string
 		dependencySet := ds.FindIntegrations(apps, excludes, passthroughs, mod)
-		sort.Slice(dependencySet.Deps, func(i, j int) bool {
-			return strings.Compare(dependencySet.Deps[i].String(), dependencySet.Deps[j].String()) < 0
-		})
-		intsParam := MakeIntsParam(apps.ToSlice(), highlights, dependencySet.Deps, app, endpt)
+		intsParam := MakeIntsParam(apps.ToSlice(), highlights, dependencySet.ToSlice(), app, endpt)
 		args := MakeArgs(title, project, clustered, epa)
 		r[output_dir] = GenerateView(args, intsParam, mod)
 	}

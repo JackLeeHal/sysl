@@ -104,7 +104,7 @@ func applyAttributes(src *sysl.Statement, dst *sysl.Statement) bool {
 	case *sysl.Statement_Foreach:
 		stmts = s.Foreach.Stmt
 	case *sysl.Statement_Call:
-		if IsSameCall(src.GetCall(), s.Call) {
+		if isSameCall(src.GetCall(), s.Call) {
 			if dst.Attrs == nil {
 				dst.Attrs = map[string]*sysl.Attribute{}
 			}
@@ -149,7 +149,7 @@ func checkCalls(mod *sysl.Module, appname string, epname string, dst *sysl.State
 	case *sysl.Statement_Foreach:
 		stmts = s.Foreach.Stmt
 	case *sysl.Statement_Call:
-		app := GetApp(s.Call.Target, mod)
+		app := getApp(s.Call.Target, mod)
 		if app == nil {
 			logrus.Warnf("%s::%s calls non-existant App: %s",
 				appname, epname, s.Call.Target.Part)
@@ -332,7 +332,7 @@ func infer_expr_type(mod *sysl.Module,
 
 func infer_types(mod *sysl.Module, appName string) {
 	for viewName, view := range mod.Apps[appName].Views {
-		if HasAbstractPattern(view.Attrs) {
+		if hasPattern("abstract", view.Attrs) {
 			continue
 		}
 		if view.Expr.GetTransform() == nil {
@@ -355,9 +355,9 @@ func postProcess(mod *sysl.Module) {
 
 		if app.Mixin2 != nil {
 			for _, src := range app.Mixin2 {
-				src_app := GetApp(src.Name, mod)
-				if HasAbstractPattern(src_app.Attrs) == false {
-					logrus.Warnf("mixin App (%s) should be ~abstract", GetAppName(src.Name))
+				src_app := getApp(src.Name, mod)
+				if hasPattern("abstract", src_app.Attrs) == false {
+					logrus.Warnf("mixin App (%s) should be ~abstract", getAppName(src.Name))
 					continue
 				}
 				if src_app.Types != nil && app.Types == nil {
@@ -371,7 +371,7 @@ func postProcess(mod *sysl.Module) {
 						app.Types[k] = v
 					} else {
 						logrus.Warnf("Type %s defined in %s and in %s",
-							k, appName, GetAppName(src.Name))
+							k, appName, getAppName(src.Name))
 					}
 				}
 				for k, v := range src_app.Views {
@@ -379,7 +379,7 @@ func postProcess(mod *sysl.Module) {
 						app.Views[k] = v
 					} else {
 						logrus.Warnf("View %s defined in %s and in %s",
-							k, appName, GetAppName(src.Name))
+							k, appName, getAppName(src.Name))
 					}
 				}
 			}

@@ -14,7 +14,7 @@ func TestGetAppName(t *testing.T) {
 	}
 
 	// when
-	actual := GetAppName(a)
+	actual := getAppName(a)
 
 	// then
 	assert.Equal(t, "test :: name", actual, "unexpected result")
@@ -37,7 +37,7 @@ func TestGetApp(t *testing.T) {
 	}
 
 	// When
-	actual := GetApp(a, m)
+	actual := getApp(a, m)
 
 	// Then
 	assert.Equal(t, expected, actual)
@@ -67,7 +67,7 @@ func TestHasAbstractPattern(t *testing.T) {
 	}
 
 	// When
-	actual := HasAbstractPattern(attrs)
+	actual := hasPattern("abstract", attrs)
 
 	// Then
 	assert.Equal(t, true, actual)
@@ -97,7 +97,7 @@ func TestHasNotAbstractPattern2(t *testing.T) {
 	}
 
 	// When
-	actual := HasAbstractPattern(attrs)
+	actual := hasPattern("abstract", attrs)
 
 	// Then
 	assert.Equal(t, false, actual)
@@ -113,7 +113,7 @@ func TestIsNotSameAppWithPartLength(t *testing.T) {
 	}
 
 	// When
-	actual := IsSameApp(a, b)
+	actual := isSameApp(a, b)
 
 	// Then
 	assert.Equal(t, false, actual)
@@ -129,7 +129,7 @@ func TestIsNotSameAppWithPartContent(t *testing.T) {
 	}
 
 	// When
-	actual := IsSameApp(a, b)
+	actual := isSameApp(a, b)
 
 	// Then
 	assert.Equal(t, false, actual)
@@ -145,7 +145,7 @@ func TestIsSameApp(t *testing.T) {
 	}
 
 	// When
-	actual := IsSameApp(a, b)
+	actual := isSameApp(a, b)
 
 	// Then
 	assert.Equal(t, true, actual)
@@ -167,7 +167,7 @@ func TestIsSameCall(t *testing.T) {
 	}
 
 	// When
-	actual := IsSameCall(a, b)
+	actual := isSameCall(a, b)
 
 	// Then
 	assert.Equal(t, true, actual)

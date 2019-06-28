@@ -38,10 +38,6 @@ type _topVar struct {
 	topAlias string
 }
 
-type Statements struct {
-	stmtSlice []*sysl.Statement
-}
-
 type CallsDrawn struct {
 	Self   string
 	Target string
@@ -54,10 +50,6 @@ type viewParams struct {
 	arrowColor         string
 	indirectArrowColor string
 	diagramTitle       string
-}
-
-func NewStatements() *Statements {
-	return &Statements{[]*sysl.Statement{}}
 }
 
 func MakeIntsParam(apps []string, highlights map[string]struct{}, dependencies []*AppDependency, app *sysl.Application, endpt *sysl.Endpoint) *IntsParam {
@@ -293,50 +285,41 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 			}
 		}
 
-		tgtPtrns := MakeStrSet()
+		targetPatterns := MakeStrSet()
 		if v.mod.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"] != nil {
 			for _, v := range v.mod.Apps[matchApp].Endpoints[matchEp].Attrs["patterns"].GetA().Elt {
-				tgtPtrns.Insert(v.GetS())
+				targetPatterns.Insert(v.GetS())
 			}
 		} else {
 			if v.mod.Apps[matchApp].Attrs["patterns"] != nil {
 				for _, v := range v.mod.Apps[matchApp].Attrs["patterns"].GetA().Elt {
-					tgtPtrns.Insert(v.GetS())
+					targetPatterns.Insert(v.GetS())
 				}
 			}
 		}
-		stmts := NewStatements()
-		stmts.makeStmts(v.mod.Apps[appA].Endpoints[epA].Stmt)
-		for _, stmt := range stmts.stmtSlice {
-			appBName := strings.Join(stmt.GetCall().GetTarget().GetPart(), " :: ")
-			if matchApp == appBName && matchEp == stmt.GetCall().Endpoint {
-				fmtVars := stmt.GetAttrs()
-				attrs := map[string]string{}
-
-				for k, v := range stmt.GetAttrs() {
-					attrs["@"+k] = v.GetS()
-				}
-				var srcPtrns []string
-				if fmtVars["patterns"] != nil {
-					for _, v := range fmtVars["patterns"].GetA().Elt {
-						srcPtrns = append(srcPtrns, v.GetS())
-					}
-				} else {
-					srcPtrns = pubSubSrcPtrns
-				}
-				var ptrns string
-				if srcPtrns != nil || tgtPtrns != nil {
-					ptrns = strings.Join(srcPtrns, ", ") + " → " + strings.Join(tgtPtrns.ToSlice(), ", ")
-				} else {
-					ptrns = ""
-				}
-				attrs["patterns"] = ptrns
-				if needsInt {
-					attrs["needs_int"] = strconv.FormatBool(needsInt)
-				}
-				label = ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
-			}
+		attrs := map[string]string{}
+		for k, v := range dep.Statement.GetAttrs() {
+			attrs["@"+k] = v.GetS()
 		}
+		var srcPtrns []string
+		if dep.Statement.GetAttrs()["patterns"] != nil {
+			for _, v := range dep.Statement.GetAttrs()["patterns"].GetA().Elt {
+				srcPtrns = append(srcPtrns, v.GetS())
+			}
+		} else {
+			srcPtrns = pubSubSrcPtrns
+		}
+		var ptrns string
+		if srcPtrns != nil || targetPatterns != nil {
+			ptrns = strings.Join(srcPtrns, ", ") + " → " + strings.Join(targetPatterns.ToSlice(), ", ")
+		} else {
+			ptrns = ""
+		}
+		attrs["patterns"] = ptrns
+		if needsInt {
+			attrs["needs_int"] = strconv.FormatBool(needsInt)
+		}
+		label = ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
 
 		flow := strings.Join([]string{appA, epB, appB, epB}, ".")
 		isPubSub := v.mod.Apps[appA].Endpoints[epA].GetIsPubsub()
@@ -555,33 +538,4 @@ func getAttrs(m *sysl.Module, appName string) map[string]string {
 		return val
 	}
 	return val
-}
-
-func (stmts *Statements) makeStmts(statements []*sysl.Statement) {
-	for _, stmt := range statements {
-		switch c := stmt.GetStmt().(type) {
-		case *sysl.Statement_Call:
-			stmts.stmtSlice = append(stmts.stmtSlice, stmt)
-		case *sysl.Statement_Action:
-			continue
-		case *sysl.Statement_Cond:
-			stmts.makeStmts(c.Cond.GetStmt())
-		case *sysl.Statement_Loop:
-			stmts.makeStmts(c.Loop.GetStmt())
-		case *sysl.Statement_LoopN:
-			stmts.makeStmts(c.LoopN.GetStmt())
-		case *sysl.Statement_Foreach:
-			stmts.makeStmts(c.Foreach.GetStmt())
-		case *sysl.Statement_Group:
-			stmts.makeStmts(c.Group.GetStmt())
-		case *sysl.Statement_Alt:
-			for _, choice := range c.Alt.GetChoice() {
-				stmts.makeStmts(choice.GetStmt())
-			}
-		case *sysl.Statement_Ret:
-			continue
-		default:
-			panic("No statement!")
-		}
-	}
 }

@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
-	sysl "github.com/anz-bank/sysl/src/proto"
+	"github.com/anz-bank/sysl/src/proto"
 	"github.com/yale8848/stream"
 )
 
@@ -15,16 +16,17 @@ type AppElement struct {
 }
 
 type AppDependency struct {
-	Self   *AppElement
-	Target *AppElement
+	Self      *AppElement
+	Target    *AppElement
+	Statement *sysl.Statement
 }
 
 type DependencySet struct {
-	Deps []*AppDependency
+	Deps map[string]*AppDependency
 }
 
 func (dep *AppDependency) String() string {
-	return fmt.Sprintf("s.name: %s, s.end: %s, t.name: %s, t.end: %s", dep.Self.Name, dep.Self.Endpoint, dep.Target.Name, dep.Target.Endpoint)
+	return fmt.Sprintf("%s:%s:%s:%s", dep.Self.Name, dep.Self.Endpoint, dep.Target.Name, dep.Target.Endpoint)
 }
 
 func (dep *AppDependency) Equals(target *AppDependency) bool {
@@ -32,20 +34,18 @@ func (dep *AppDependency) Equals(target *AppDependency) bool {
 		(dep.Target.Name == target.Target.Name) && (dep.Target.Endpoint == target.Target.Endpoint)
 }
 
-func (ds *DependencySet) Add(dep *AppDependency) {
-	if !ds.Contains(dep) {
-		ds.Deps = append(ds.Deps, dep)
+func (ds *DependencySet) ToSlice() []*AppDependency {
+	o := []*AppDependency{}
+	keys := []string{}
+	for k := range ds.Deps {
+		keys = append(keys, k)
 	}
-}
-
-func (ds *DependencySet) Contains(dep *AppDependency) bool {
-	for _, v := range ds.Deps {
-		if v.Equals(dep) {
-			return true
-		}
+	sort.Strings(keys)
+	for _, k := range keys {
+		o = append(o, ds.Deps[k])
 	}
 
-	return false
+	return o
 }
 
 func (dep *AppDependency) extractAppNames() StrSet {
@@ -63,38 +63,38 @@ func (dep *AppDependency) extractEndpoints() StrSet {
 }
 
 func NewDependencySet() *DependencySet {
-	return &DependencySet{[]*AppDependency{}}
+	return &DependencySet{map[string]*AppDependency{}}
 }
 
-func MakeAppDependency(self, target *AppElement) *AppDependency {
-	return &AppDependency{self, target}
+func MakeAppDependency(self, target *AppElement, stmt *sysl.Statement) *AppDependency {
+	return &AppDependency{self, target, stmt}
 }
 
 func MakeAppElement(name, endpoint string) *AppElement {
 	return &AppElement{name, endpoint}
 }
 
-type CallSlice struct {
-	slice []*sysl.Call
+type CallStatementSlice struct {
+	slice []*sysl.Statement
 }
 
-func NewCallSlice() *CallSlice {
-	return &CallSlice{}
+func NewCallSlice() *CallStatementSlice {
+	return &CallStatementSlice{}
 }
 
-func (cs *CallSlice) Add(call *sysl.Call) {
+func (cs *CallStatementSlice) Add(call *sysl.Statement) {
 	cs.slice = append(cs.slice, call)
 }
 
-func (cs *CallSlice) GetSlice() []*sysl.Call {
+func (cs *CallStatementSlice) GetSlice() []*sysl.Statement {
 	return cs.slice
 }
 
-func (cs *CallSlice) CollectCallStatements(stmts []*sysl.Statement) {
+func (cs *CallStatementSlice) CollectCallStatements(stmts []*sysl.Statement) {
 	for _, stat := range stmts {
 		switch c := stat.GetStmt().(type) {
 		case *sysl.Statement_Call:
-			cs.Add(c.Call)
+			cs.Add(stat)
 		case *sysl.Statement_Action, *sysl.Statement_Ret:
 			continue
 		case *sysl.Statement_Cond:
@@ -117,11 +117,11 @@ func (cs *CallSlice) CollectCallStatements(stmts []*sysl.Statement) {
 	}
 }
 
-func FindApps(module *sysl.Module, excludes, integrations StrSet, ds *DependencySet, highlight bool) StrSet {
+func FindApps(module *sysl.Module, excludes, integrations StrSet, ds []*AppDependency, highlight bool) StrSet {
 	r := []string{}
 	appReStr := toPattern(integrations.ToSlice())
 	re := regexp.MustCompile(appReStr)
-	st, _ := stream.Of(ds.Deps)
+	st, _ := stream.Of(ds)
 	st.ForEach(func(v stream.T) bool {
 		if dep, ok := v.(*AppDependency); ok {
 			appNames := dep.extractAppNames()
@@ -139,12 +139,12 @@ func FindApps(module *sysl.Module, excludes, integrations StrSet, ds *Dependency
 				app := module.GetApps()[item]
 				if highlight {
 					if re.MatchString(item) &&
-						!hasPattern("human", MakeStrSetFromSpecificAttr("patterns", app.GetAttrs()).ToSlice()) {
+						!hasPattern("human", app.GetAttrs()) {
 						r = append(r, item)
 					}
 					return true
 				}
-				if !hasPattern("human", MakeStrSetFromSpecificAttr("patterns", app.GetAttrs()).ToSlice()) {
+				if !hasPattern("human", app.GetAttrs()) {
 					r = append(r, item)
 				}
 				return true
@@ -164,18 +164,20 @@ func walkPassthrough(excludes, passthroughs StrSet, dep *AppDependency, integrat
 	undeterminedEps := MakeStrSet(targetEndpoint).Intersection(MakeStrSet(".. * <- *", "*"))
 	//Add to integration array since all dependencies are determined.
 	if len(excludedApps) == 0 && len(undeterminedEps) == 0 {
-		integrations.Add(dep)
+		integrations.Deps[dep.String()] = dep
 	}
 
 	// find the next outbound dep
 	if passthroughs.Contains(targetName) {
 		cs := NewCallSlice()
 		cs.CollectCallStatements(module.GetApps()[targetName].GetEndpoints()[targetEndpoint].GetStmt())
-		for _, call := range cs.GetSlice() {
+		for _, stmt := range cs.GetSlice() {
+			call := stmt.GetStmt().(*sysl.Statement_Call).Call
 			nextAppName := strings.Join(call.GetTarget().GetPart(), " :: ")
 			nextEpName := call.GetEndpoint()
 			next := MakeAppElement(nextAppName, nextEpName)
-			nextDep := MakeAppDependency(target, next)
+			nextDep := MakeAppDependency(target, next, stmt)
+			nextDep.Statement = stmt
 			walkPassthrough(excludes, passthroughs, nextDep, integrations, module)
 		}
 	}
@@ -196,12 +198,12 @@ func (ds *DependencySet) FindIntegrations(apps, excludes, passthroughs StrSet, m
 		lenInterExcludes := len(interExcludes)
 		lenInterEndpoints := len(interEndpoints)
 		if isSubsection && lenInterExcludes == 0 && lenInterEndpoints == 0 {
-			integrations.Add(dep)
+			integrations.Deps[dep.String()] = dep
 		}
 		// collect outbound dependencies
 		if lenPassthroughs > 0 &&
 			((isSubsection || (isSelfSubsection && isTargetSubsection)) && lenInterExcludes == 0 && lenInterEndpoints == 0) {
-			outboundDeps.Add(dep)
+			outboundDeps.Deps[dep.String()] = dep
 		}
 	}
 	if lenPassthroughs > 0 {
@@ -225,9 +227,9 @@ func (ds *DependencySet) collectStatementDependencies(stmts []*sysl.Statement, a
 	for _, stat := range stmts {
 		switch c := stat.GetStmt().(type) {
 		case *sysl.Statement_Call:
-			targetName := GetAppName(c.Call.GetTarget())
-			dep := MakeAppDependency(MakeAppElement(appname, epname), MakeAppElement(targetName, c.Call.GetEndpoint()))
-			ds.Add(dep)
+			targetName := getAppName(c.Call.GetTarget())
+			dep := MakeAppDependency(MakeAppElement(appname, epname), MakeAppElement(targetName, c.Call.GetEndpoint()), stat)
+			ds.Deps[dep.String()] = dep
 		case *sysl.Statement_Action, *sysl.Statement_Ret:
 			continue
 		case *sysl.Statement_Cond:
@@ -263,21 +265,6 @@ func isSub(child, parent StrSet) bool {
 	return len(child.Difference(parent)) == 0
 }
 
-func hasPattern(s string, arr []string) bool {
-	m := buildStringBoolFilter(arr)
-
-	return m[s]
-}
-
 func toPattern(comp []string) string {
 	return fmt.Sprintf(`^(?:%s)(?: *::|$)`, strings.Join(comp, "|"))
-}
-
-func buildStringBoolFilter(a []string) map[string]bool {
-	m := make(map[string]bool)
-	for _, v := range a {
-		m[v] = true
-	}
-
-	return m
 }

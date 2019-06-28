@@ -258,7 +258,7 @@ func stmtToValue(s *sysl.Statement) *sysl.Value {
 	case *sysl.Statement_Call:
 		stmt_type = "call"
 		addItemToValueMap(m, "endpoint", MakeValueString(x.Call.Endpoint))
-		addItemToValueMap(m, "target", MakeValueString(GetAppName(x.Call.Target)))
+		addItemToValueMap(m, "target", MakeValueString(getAppName(x.Call.Target)))
 	case *sysl.Statement_Ret:
 		stmt_type = "return"
 		addItemToValueMap(m, "payload", MakeValueString(x.Ret.Payload))
@@ -334,7 +334,7 @@ func (s Scope) AddString(name string, val string) {
 func (s Scope) AddApp(name string, app *sysl.Application) {
 	m := MakeValueMap()
 	s[name] = m
-	addItemToValueMap(m, "name", MakeValueString(GetAppName(app.Name)))
+	addItemToValueMap(m, "name", MakeValueString(getAppName(app.Name)))
 	addItemToValueMap(m, "attrs", attrsToValueMap(app.Attrs))
 	addItemToValueMap(m, "types", typesToValueMap(app.Types))
 	addItemToValueMap(m, "union", unionToValueMap(app.Types))

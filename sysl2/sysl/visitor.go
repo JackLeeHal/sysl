@@ -93,7 +93,7 @@ func (e *EndpointElement) Accept(v Visitor) {
 
 func (e *EndpointElement) sender(v VarManager) string {
 	if e.fromApp != nil {
-		return v.UniqueVarForAppName(GetAppName(e.fromApp))
+		return v.UniqueVarForAppName(getAppName(e.fromApp))
 	}
 
 	return "["
@@ -318,7 +318,7 @@ func (v *SequenceDiagramVisitor) visitEndpoint(e *EndpointElement) {
 
 	payload := strings.Join(formatReturnParam(v.m, getReturnPayload(endpoint.Stmt)), " | ")
 
-	isCallingSelf := e.fromApp != nil && GetAppName(e.fromApp) == e.appName
+	isCallingSelf := e.fromApp != nil && getAppName(e.fromApp) == e.appName
 
 	if !isCallingSelf && len(payload) == 0 && e.deactivate != nil {
 		e.deactivate()
@@ -403,7 +403,7 @@ func (v *SequenceDiagramVisitor) visitCall(e *StatementElement, i int, c *sysl.C
 
 	p := &EndpointElement{
 		fromApp:                app.GetName(),
-		appName:                GetAppName(c.GetTarget()),
+		appName:                getAppName(c.GetTarget()),
 		endpointName:           c.GetEndpoint(),
 		uptos:                  e.uptos,
 		senderPatterns:         senderPatterns,
