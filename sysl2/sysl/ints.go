@@ -28,6 +28,7 @@ func GenerateIntegrations(
 	// The "project" app that specifies the required view of the integration
 	app := mod.GetApps()[project]
 	of := MakeFormatParser(output)
+	arr := ds.ToSlice()
 	// Interate over each endpoint within the selected project
 	for epname, endpt := range app.GetEndpoints() {
 		// build the set of excluded items
@@ -37,7 +38,6 @@ func GenerateIntegrations(
 		// each one of these will be placed into the "integration" list
 		integrations := MakeStrSetFromActionStatement(endpt.GetStmt())
 
-		arr := ds.ToSlice()
 		highlights := FindApps(mod, excludeStrSet, integrations, arr, true)
 		apps := FindApps(mod, excludeStrSet, highlights, arr, false)
 		apps = apps.Difference(excludes)

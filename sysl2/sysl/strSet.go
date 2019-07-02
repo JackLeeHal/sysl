@@ -127,3 +127,17 @@ func (s StrSet) Difference(other StrSet) StrSet {
 
 	return out
 }
+
+// Returns true if child set is a subset of parent set
+func (s StrSet) IsSubSet(parent StrSet) bool {
+	if len(s) == 0 && len(parent) == 0 {
+		return true
+	}
+	if len(parent) == 0 {
+		return false
+	}
+	if len(s) == 0 {
+		return true
+	}
+	return len(s.Difference(parent)) == 0
+}

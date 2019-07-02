@@ -83,7 +83,9 @@ func (v *IntsDiagramVisitor) VarManagerForComponent(appName string, nameMap map[
 	alias := fmt.Sprintf("_%d", i)
 	attrs := getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label := ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label := fp.Parse(attrs)
+
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -108,7 +110,9 @@ func (v *IntsDiagramVisitor) VarManagerForTopState(appName string) string {
 
 	attrs = getAttrs(v.mod, appName)
 	attrs["appname"] = appName
-	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = fp.Parse(attrs)
+
 	ts := &_topVar{
 		topLabel: label,
 		topAlias: alias,
@@ -144,7 +148,9 @@ func (v *IntsDiagramVisitor) VarManagerForState(name string) string {
 		}
 	}
 	attrs["appname"] = epName
-	label = ParseFmt(attrs, v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	fp := MakeFormatParser(v.mod.Apps[v.project].GetAttrs()["appfmt"].GetS())
+	label = fp.Parse(attrs)
+
 	s := &_var{
 		label: label,
 		alias: alias,
@@ -192,7 +198,7 @@ func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, res
 	for _, k := range keys {
 		v.VarManagerForTopState(k)
 		strSet := MakeStrSet(clusters[k]...)
-		for _, m := range strSet.ToSlice() {
+		for _, m := range strSet.ToSortedSlice() {
 			v.VarManagerForState(k + " : " + m)
 		}
 		fmt.Fprintln(v.stringBuilder, "}")
@@ -319,7 +325,8 @@ func (v *IntsDiagramVisitor) generateStateView(args *Args, viewParams viewParams
 		if needsInt {
 			attrs["needs_int"] = strconv.FormatBool(needsInt)
 		}
-		label = ParseFmt(attrs, params.app.Attrs["epfmt"].GetS())
+		fp := MakeFormatParser(params.app.Attrs["epfmt"].GetS())
+		label = fp.Parse(attrs)
 
 		flow := strings.Join([]string{appA, epB, appB, epB}, ".")
 		isPubSub := v.mod.Apps[appA].Endpoints[epA].GetIsPubsub()
@@ -473,6 +480,7 @@ func (v *IntsDiagramVisitor) generateComponentView(args *Args, viewParams viewPa
 
 func GenerateView(args *Args, params *IntsParam, mod *sysl.Module) string {
 	var stringBuilder strings.Builder
+	var titleParser *FormatParser
 	v := MakeIntsDiagramVisitor(mod, &stringBuilder, params.highlights, args.project)
 	restrictBy := ""
 	if params.endpt.Attrs["restrict_by"] != nil {
@@ -485,16 +493,16 @@ func GenerateView(args *Args, params *IntsParam, mod *sysl.Module) string {
 	arrowColor := appAttrs["arrow_color"].GetS()
 	indirectArrowColor := appAttrs["indirect_arrow_color"].GetS()
 
-	diagramTitle := ""
 	attrs := map[string]string{
 		"epname":     params.endpt.Name,
 		"eplongname": params.endpt.LongName,
 	}
 	if appAttrs["title"].GetS() != "" {
-		diagramTitle = ParseFmt(attrs, appAttrs["title"].GetS())
+		titleParser = MakeFormatParser(appAttrs["title"].GetS())
 	} else {
-		diagramTitle = ParseFmt(attrs, args.title)
+		titleParser = MakeFormatParser(args.title)
 	}
+	diagramTitle := titleParser.Parse(attrs)
 
 	viewParams := &viewParams{
 		restrictBy:         restrictBy,

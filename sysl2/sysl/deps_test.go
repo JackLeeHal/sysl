@@ -20,122 +20,6 @@ func TestAppDependency_String(t *testing.T) {
 	assert.Equal(t, actual, expected)
 }
 
-func TestCollectCallStatements(t *testing.T) {
-	// Given
-	stmts := []*sysl.Statement{
-		{
-			Stmt: &sysl.Statement_Call{
-				Call: &sysl.Call{
-					Target: &sysl.AppName{
-						Part: []string{"AppA"},
-					},
-					Endpoint: "EndptA",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Action{
-				Action: &sysl.Action{
-					Action: "Get",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Ret{
-				Ret: &sysl.Return{
-					Payload: "Return A",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Cond{
-				Cond: &sysl.Cond{
-					Stmt: []*sysl.Statement{
-						{
-							Stmt: &sysl.Statement_Call{
-								Call: &sysl.Call{
-									Target: &sysl.AppName{
-										Part: []string{"AppB"},
-									},
-									Endpoint: "EndptB",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Loop{
-				Loop: &sysl.Loop{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_LoopN{
-				LoopN: &sysl.LoopN{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Foreach{
-				Foreach: &sysl.Foreach{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Group{
-				Group: &sysl.Group{
-					Stmt: []*sysl.Statement{},
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Alt{
-				Alt: &sysl.Alt{
-					Choice: []*sysl.Alt_Choice{
-						{
-							Stmt: []*sysl.Statement{},
-						},
-					},
-				},
-			},
-		},
-	}
-	cs := NewCallSlice()
-	expected := []*sysl.Statement{
-		{
-			Stmt: &sysl.Statement_Call{
-				Call: &sysl.Call{
-					Target: &sysl.AppName{
-						Part: []string{"AppA"},
-					},
-					Endpoint: "EndptA",
-				},
-			},
-		},
-		{
-			Stmt: &sysl.Statement_Call{
-				Call: &sysl.Call{
-					Target: &sysl.AppName{
-						Part: []string{"AppB"},
-					},
-					Endpoint: "EndptB",
-				},
-			},
-		},
-	}
-
-	// When
-	cs.CollectCallStatements(stmts)
-
-	// Then
-	assert.Equal(t, cs.GetSlice(), expected)
-}
-
 var mod = &sysl.Module{
 	Apps: map[string]*sysl.Application{
 		"AppA": {
@@ -324,7 +208,7 @@ func TestFindIntegrations(t *testing.T) {
 	actual := ds.FindIntegrations(apps, excludes, passthrough, mod)
 
 	// Then
-	assert.Equal(t, len(actual.Deps), len(expected.Deps))
+	assert.Equal(t, 1, len(actual.Deps))
 }
 
 func TestDependencySet_ResolveDependencies(t *testing.T) {
@@ -336,43 +220,4 @@ func TestDependencySet_ResolveDependencies(t *testing.T) {
 
 	// Then
 	assert.Equal(t, 1, len(ds.Deps))
-}
-
-func TestSubWhenParentAndChildEmpty(t *testing.T) {
-	// Given
-	c := MakeStrSet()
-	p := MakeStrSet()
-	expected := true
-
-	// When
-	actual := isSub(c, p)
-
-	// Then
-	assert.Equal(t, expected, actual)
-}
-
-func TestSubWhenParentEmpty(t *testing.T) {
-	// Given
-	c := MakeStrSet("A")
-	p := MakeStrSet()
-	expected := false
-
-	// When
-	actual := isSub(c, p)
-
-	// Then
-	assert.Equal(t, expected, actual)
-}
-
-func TestSubWhenChildEmpty(t *testing.T) {
-	// Given
-	c := MakeStrSet()
-	p := MakeStrSet("A")
-	expected := true
-
-	// When
-	actual := isSub(c, p)
-
-	// Then
-	assert.Equal(t, expected, actual)
 }

@@ -166,3 +166,42 @@ func TestDifference(t *testing.T) {
 	assert.Equal(t, 1, len(c), "Unexpected result")
 	assert.Equal(t, []string{"c"}, c.ToSortedSlice(), "Unexpected result")
 }
+
+func TestSubWhenParentAndChildEmpty(t *testing.T) {
+	// Given
+	c := MakeStrSet()
+	p := MakeStrSet()
+	expected := true
+
+	// When
+	actual := c.IsSubSet(p)
+
+	// Then
+	assert.Equal(t, expected, actual)
+}
+
+func TestSubWhenParentEmpty(t *testing.T) {
+	// Given
+	c := MakeStrSet("A")
+	p := MakeStrSet()
+	expected := false
+
+	// When
+	actual := c.IsSubSet(p)
+
+	// Then
+	assert.Equal(t, expected, actual)
+}
+
+func TestSubWhenChildEmpty(t *testing.T) {
+	// Given
+	c := MakeStrSet()
+	p := MakeStrSet("A")
+	expected := true
+
+	// When
+	actual := c.IsSubSet(p)
+
+	// Then
+	assert.Equal(t, expected, actual)
+}
