@@ -21,7 +21,10 @@ func TestGenerateIntegrations(t *testing.T) {
 	s2 := MakeAppElement("IntegratedSystem", "integrated_endpoint_2")
 	t2 := MakeAppElement("System2", "endpoint")
 	dep2 := MakeAppDependency(s2, t2, stmt)
-	deps := []*AppDependency{dep1, dep2}
+	deps := map[string]*AppDependency{
+		"IntegratedSystem:integrated_endpoint_1:System1:endpoint": dep1,
+		"IntegratedSystem:integrated_endpoint_2:System2:endpoint": dep2,
+	}
 	endpt := &sysl.Endpoint{
 		Name: "_",
 		Stmt: []*sysl.Statement{

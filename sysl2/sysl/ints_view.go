@@ -12,7 +12,7 @@ import (
 type IntsParam struct {
 	apps         []string
 	highlights   map[string]struct{}
-	integrations []*AppDependency
+	integrations map[string]*AppDependency
 	app          *sysl.Application
 	endpt        *sysl.Endpoint
 }
@@ -52,7 +52,7 @@ type viewParams struct {
 	diagramTitle       string
 }
 
-func MakeIntsParam(apps []string, highlights map[string]struct{}, dependencies []*AppDependency, app *sysl.Application, endpt *sysl.Endpoint) *IntsParam {
+func MakeIntsParam(apps []string, highlights map[string]struct{}, dependencies map[string]*AppDependency, app *sysl.Application, endpt *sysl.Endpoint) *IntsParam {
 	return &IntsParam{apps, highlights, dependencies, app, endpt}
 }
 
@@ -164,7 +164,7 @@ func (v *IntsDiagramVisitor) VarManagerForState(name string) string {
 	return s.alias
 }
 
-func (v *IntsDiagramVisitor) buildClusterForStateView(deps []*AppDependency, restrictBy string) {
+func (v *IntsDiagramVisitor) buildClusterForStateView(deps map[string]*AppDependency, restrictBy string) {
 	clusters := map[string][]string{}
 	for _, dep := range deps {
 		appA := dep.Self.Name

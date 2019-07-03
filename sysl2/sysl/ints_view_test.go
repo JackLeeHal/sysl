@@ -196,8 +196,8 @@ func TestBuildClusterForStateView(t *testing.T) {
 		topSymbols: map[string]*_topVar{},
 		symbols:    map[string]*_var{},
 	}
-	deps := []*AppDependency{
-		&AppDependency{
+	deps := map[string]*AppDependency{
+		"a:epa:b:epb": {
 			Self: &AppElement{
 				Name:     "a",
 				Endpoint: "epa",
@@ -249,8 +249,8 @@ func TestGenerateComponentView(t *testing.T) {
 	//Given
 	var stringBuilder strings.Builder
 	viewParams := &viewParams{}
-	deps := []*AppDependency{
-		&AppDependency{
+	deps := map[string]*AppDependency{
+		"a:epa:b:epb": {
 			Self: &AppElement{
 				Name:     "a",
 				Endpoint: "epa",
@@ -329,8 +329,8 @@ func TestGenerateStateView(t *testing.T) {
 		},
 	}
 	viewParams := &viewParams{}
-	deps := []*AppDependency{
-		&AppDependency{
+	deps := map[string]*AppDependency{
+		"a:epa:b:epb": {
 			Self: &AppElement{
 				Name:     "a",
 				Endpoint: "epa",
@@ -417,8 +417,8 @@ _1 -[#black]> _2 :
 
 func TestGenerateView(t *testing.T) {
 	//Given
-	deps := []*AppDependency{
-		&AppDependency{
+	deps := map[string]*AppDependency{
+		"a:epa:b:epb": {
 			Self: &AppElement{
 				Name:     "a",
 				Endpoint: "epa",
@@ -500,8 +500,8 @@ func TestDrawSystemView(t *testing.T) {
 			},
 		},
 	}
-	deps := []*AppDependency{
-		&AppDependency{
+	deps := map[string]*AppDependency{
+		"a:epa:b:epb": {
 			Self: &AppElement{
 				Name:     "a",
 				Endpoint: "epa",
@@ -538,7 +538,7 @@ _1 --> _2 <<indirect>>
 func TestMakeIntsParam(t *testing.T) {
 	p := MakeIntsParam([]string{"a"},
 		map[string]struct{}{},
-		[]*AppDependency{},
+		map[string]*AppDependency{},
 		&sysl.Application{}, &sysl.Endpoint{})
 
 	assert.NotNil(t, p)
